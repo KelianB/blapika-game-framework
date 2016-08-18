@@ -4,4 +4,4 @@ See documentation for more specific information.
 
 ## Example
 
-See https://pages.github.com/
+See [this](https://github.com/KelianB/blapika-game-framework/blob/master/example.html) for a small example on how to use the framework.
