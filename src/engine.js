@@ -40,6 +40,7 @@ function Engine() {
 
     /** Checks if a given module is loaded.
      * @param {String} moduleName - The name of the module to check for.
+     * @returns {Boolean} Whether or not the module is loaded.
      */
     this.isModuleLoaded = function(moduleName) {
         return this.loadedModules.indexOf(moduleName) != -1;
