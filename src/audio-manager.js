@@ -36,13 +36,13 @@ Engine.prototype.AudioManager = new function() {
         }
 
         audio.addEventListener("ended", function() {
-
             // Remove from playing array
             self.playing.splice(self.playing.indexOf(this), 1);
         });
 
         this.playing.push(audio);
 
+        audio.muted = this.muted;
         audio.play();
     };
 
