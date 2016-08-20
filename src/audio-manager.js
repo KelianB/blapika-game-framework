@@ -2,27 +2,52 @@
     global $ Engine
 */
 
+// /!\ Do not use audio.play() or audio.volume. Instead use respectively AudioManager.play and AudioManager.setVolume
+
 /** @class
  * @classdesc An utility class which improves audio for JS apps. Extends audio capabilities and handles features such as global volume, mute, ...
  */
 Engine.prototype.AudioManager = new function() {
     var self = this;
-    this.globalVolume = 1;
+    this.volumeModifier = 1;
     this.playing = [];
     this.muted = false;
 
-    // Adds a function to the Audio prototype to fade the volume to a given value in a given duration.
+    // -------- Audio prototype changes --------
+
+    /** Fades the volume of the audio element to a given value in a given duration.
+     * @param {Number} targetVolume - The volume at which the audio will end.
+     * @param {Number} duration - The time it should take to reach the target volume, in milliseconds.
+     */
     Audio.prototype.fadeTo = function(targetVolume, duration) {
         $(this).animate({volume: targetVolume}, duration);
     };
 
-    /** Sets the volume of all sounds (will be applied to the sounds that are played later).
-     * @param {Number} volume - The volume value, between 0 and 1.
+    /** Sets the volume of an Audio element.
+     * @param {Number} volume - The new volume, between 0 and 1.
      */
-    this.setGlobalVolume = function(volume) {
-        this.globalVolume = volume;
+    Audio.prototype.setVolume = function(volume) {
+        this.absoluteVolume = volume;
+        self.applyVolumeTransforms(this);
+    };
+
+    // -------- Audio Manager functions --------
+
+    /** Sets the playing volume of a given Audio element, handling the global volume modifier.
+     * @param {Audio} audio - The target Audio element.
+     */
+    this.applyVolumeTransforms = function(audio) {
+        audio.absoluteVolume = audio.absoluteVolume || 1;
+        audio.volume = audio.absoluteVolume * this.volumeModifier;
+    };
+
+    /** Sets the volume modifier which will multiply the volume of all sounds.
+     * @param {Number} volumeModifier - The volume multiplier, between 0 and 1.
+     */
+    this.setVolumeModifier = function(volumeModifier) {
+        this.volumeModifier = volumeModifier;
         for(var i = 0; i < this.playing.length; i++)
-            this.playing[0].volume = this.globalVolume;
+            this.applyVolumeTransforms(this.playing[i]);
     };
 
     /** Plays audio after cloning the audio element, allowing it to be played multiple times simultaneously.
@@ -76,7 +101,7 @@ Engine.prototype.AudioManager = new function() {
         }
     };
 
-    /** Toggles mute for all audio. */
+    /** Toggles mute for all audio elements. */
     this.toggleMute = function() {
         this.muted = !this.muted;
 
