@@ -4,7 +4,7 @@
  */
 function Engine() {
     var self = this;
-    var allModules = ["core", "animation", "audio-manager", "resource-manager", "debug"];
+    var allModules = ["core", "animation", "audio-manager", "resource-manager", "debug", "particle"];
 
     /** The current version of the engine. */
     this.version = "0.1";
