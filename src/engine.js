@@ -23,11 +23,13 @@ function Engine() {
         var toLoad = modules.length;
 
         for(var i = 0; i < modules.length; i++) {
-            $.getScript(self.root + modules[i] + ".js", function() {
-                self.loadedModules.push(modules[i]);
-                if(--toLoad == 0 && callback)
-                    callback();
-            })
+            (function(moduleName) {
+                    $.getScript(self.root + moduleName + ".js", function() {
+                    self.loadedModules.push(moduleName);
+                    if(--toLoad == 0 && callback)
+                        callback();
+                })
+            })(modules[i]);
         }
     };
 
