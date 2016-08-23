@@ -1,5 +1,5 @@
 /*
-    global $ Engine
+    global $ Engine engine
 */
 
 /** Creates an instance of the engine core.
@@ -123,7 +123,7 @@ Engine.prototype.Core = new function() {
         self.ctx.restore();
 
         if(engine.isModuleLoaded("debug") && engine.Debug.enabled)
-            engine.Debug.render(game.ctx);
+            engine.Debug.render(self.ctx);
     };
 
     /** Registers the events that will be re-directed the the event listeners. */
