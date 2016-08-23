@@ -6,62 +6,80 @@
  * @classdesc This class allows to spawn, render and update particles
  * @param {Object} config - The configuration of this particle spawner.
  * 
+ * @param {Object|Integer} [config.lifeTime=-1]       - The amount of ticks after which a particle will be removed (either an int or {min: __, max: __}).
+ * @param {Object|Number}  [config.speed=5]           - The starting speed of particles (either a number or {min: __, max: __}).
+ * @param {Object|Integer} [config.spawnCount=10]     - The amount of particles that will spawn by default when the spawn function is called (either a number or {min: __, max: __}).
+ * @param {Number}         [config.opacity=1]         - The initial opacity of particles (between 0 and 1).
  * 
- * ----------- REDO ----------- 
- * @param {Number} config.minSpawnDx - Default 0
- * @param {Number} config.maxSpawnDx - Default 0
- * @param {Number} config.minSpawnDy - Default 0
- * @param {Number} config.maxSpawnDy - Default 0
- * @param {Number} config.minSpawnRotation - Not implemented
- * @param {Number} config.maxSpawnRotation - Not implemented
- * @param {Number} config.maxSpawnDr - Not implemented
- * @param {Number} config.minSpawnDr - Not implemented
- * @param {Number} config.maxDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
- * @param {Number} config.minDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
- * @param {Array} config.images - An array of Image objects. Images will be chosen randomly when rendering a particle
- * @param {Object} config.image - Do not use with the images params. Used to render a particle
- * @param {Boolean} config.fadeOut - Default false. Remove particles smoothly when set to true.
- * @param {Boolean} config.fadeSpeed - Default 0.1
- * @param {Number} config.minDx - Not implemented
- * @param {Number} config.maxDx - Not implemented
- * @param {Number} config.minDy - Not implemented
- * @param {Number} config.maxDy - Not implemented
- * @param {Number} config.opacity - Default 1.0
- * @param {Number} config.gravity - Default 0. Add its value every tick to dy
- * @param {Number} config.wind - Default 0. Add its value every tick to dx
- * @param {Number} config.rotateModifier - Default 0. Add its value every tick to dr
- * @param {Number} config.spawnCount - Default 10. Number of particle to spawn
+ * @param {Object}         [config.position]          - The default spawning position particles. Structure: {x: Number | {min: __, max: __}, y: Number | {min: __, max: __}.
+ * @param {Number}         [config.width=32]          - The default width of particles.
+ * @param {Number}         [config.height=32]         - The default height of particles.
+ * 
+ * @param {Number}         [config.fadeInSpeed=0]     - By how much the opacity of particles is incremented at each tick until reaching 1 (between 0 and 1).
+ * @param {Number}         [config.fadeOutSpeed=0]    - By how much the opacity of particles is decremented at each tick until reaching 0 (between 0 and 1). The fade-out starts before the particle's lifetime is reached, so that the opacity is at 0 right before the particle is removed.
+ * 
+ * @param {Function}       [config.customUpdate]      - A function that will be called on each particle update, with the particle as the <i>this</i> object.
+ * @param {Function}       [config.customRender]      - A function that will be called after rendering the particle image and before removing the rotation, translation and opacity transforms. The particle is accessible as the <i>this</i> object.
+ * @param {Function}       [config.customRenderAbsolute] - A function that will be called after rendering the particle image and removing the rotation, translation and opacity transforms. The particle is accessible as the <i>this</i> object.
+ * 
+ * @param {Function}       [config.onParticleAdded]   - A function that will be called every time a particle is spawned. params: (particle, spawnIndex).
+ * @param {Function}       [config.onParticleRemoved] - A function that will be called every time a particle is removed. params: (particle).
+ *  
+ * @param {Image}          [config.image]             - The image that will be used for rendering each particle. This property has priority over config.images.
+ * @param {Image[]}        [config.images]            - An array from which the image of each spawned particle will be randomly selected.
+ * 
+ * @param {Object[]}       [config.spawnAngles=[{min: 0, max: Math.PI * 2}]] - An array of angles at which particles can spawn. Each angle can be either a number of an interval {min __, max: __}.
+ * 
+ * 
+ * 
  */
 Engine.prototype.ParticleSpawner = function(config) {
     var defaults = {
-        lifeTime: {min: 30, max: 50},
-        speed: {min: 4, max: 5},
-        spawnAngleIntervals: [{min: 0, max: Math.PI * 2}],
+        lifeTime: -1,
+        speed: 5,
+        spawnCount: 10,
         opacity: 1,
+        
+        position: {x: 0, y: 0},
+        width: 32,
+        height: 32,
+        
+        fadeInSpeed: 0,
+        fadeOutSpeed: 0,
+        
         customRender: function() {},
-        customRenderTransformed: function() {},
+        customRenderAbsolute: function() {},
         customUpdate: function() {},
+        
+        onParticleAdded: function(particle) {},
+        onParticleRemoved: function(particle) {},
+        
+        image: null, // has priority over images
+        images: null,
+        
+        spawnAngles: [{min: 0, max: Math.PI * 2}],
+        
+        // stuff below still needs documentation
+        
+        // might need to change some stuff
         xMovement: {acceleration: 0, minSpeed: -1000, maxSpeed: 1000},
         yMovement: {acceleration: 0, minSpeed: -1000, maxSpeed: 1000},
         rotation: {acceleration: 0, minSpeed: 0, maxSpeed: 0, initial: {min: 0, max: 0}},
         
-        width: 30,
-        height: 30,
-        fadeOutSpeed: 0,
-        fadeInSpeed: 0,
-        spawnCount: 5,
-        
-        onParticleAdded: function(particle) {},
-        onParticleRemoved: function(particle) {},
     };  
 
     this.config = {};
     
     for(var key in defaults) {
-        this.config[key] = typeof(config[key]) == "undefined" ? defaults[key] : config[key];
+        this.config[key] = typeof config[key] == "undefined" ? defaults[key] : config[key];
+        // Iterate over sub-objects
+        if(typeof this.config[key] == "object") {
+            for(var key2 in defaults[key]) {
+                this.config[key][key2] = typeof this.config[key][key2] == "undefined" ? defaults[key][key2] : this.config[key][key2];
+            }
+        }
+        
     }
-
-    this.config.images = config.images || [config.image];
 
     this.particles = [];
     
@@ -70,21 +88,29 @@ Engine.prototype.ParticleSpawner = function(config) {
         for(var key in this.config)
             config[key] = config[key] || this.config[key];
 
-        for(var i = 0; i < config.spawnCount; i++) {
-            var angleInterval = randInArray(config.spawnAngleIntervals);
+        function randInRange(obj) {return randomInRange(obj.min, obj.max);}
 
-            var p = new engine.Particle(this, {
-                x: randomInRange(config.minSpawnX, config.maxSpawnX || config.minSpawnX),
-                y: randomInRange(config.minSpawnY, config.maxSpawnY || config.minSpawnY),
-                angle: randomInRange(angleInterval.min, angleInterval.max),
-                speed: randomInRange(config.speed.min, config.speed.max),
-                image: randInArray(config.images),
-                lifeTime: Math.floor(randomInRange(config.lifeTime.min, config.lifeTime.max)),
-                rotation: randomInRange(config.rotation.initial.min, config.rotation.initial.max),
-            }, config);
+        var spawnCount = typeof config.spawnCount === "object" ? Math.floor(randInRange(config.spawnCount)) : config.spawnCount;
+
+        for(var i = 0; i < spawnCount; i++) {
+            var angle = randInArray(config.spawnAngles);
+            angle = typeof angle === "object" ? randInRange(angle) : angle;
+            
+            var particleParams = {
+                lifeTime: typeof config.lifeTime   === "object" ? Math.floor(randInRange(config.lifeTime))   : config.lifeTime,
+                speed:    typeof config.speed      === "object" ?           (randInRange(config.speed))      : config.speed,
+                x:        typeof config.position.x === "object" ?           (randInRange(config.position.x)) : config.position.x,
+                y:        typeof config.position.y === "object" ?           (randInRange(config.position.y)) : config.position.y,
+                angle: angle,
+                image: config.image ? config.image : (config.images ? randInArray(config.images) : null),
+
+                rotation: randInRange(config.rotation.initial),
+            };
+        
+            var p = new engine.Particle(this, particleParams, config);
             
             this.particles.push(p);
-            this.config.onParticleAdded(p);
+            this.config.onParticleAdded(p, i);
         }
     };
 
@@ -114,7 +140,6 @@ Engine.prototype.ParticleSpawner = function(config) {
 };
 
 Engine.prototype.Particle = function(spawner, params, config) {
-    console.log(this)
     this.x = params.x;
     this.y = params.y;
     this.r = params.rotation;
@@ -187,12 +212,12 @@ Engine.prototype.Particle = function(spawner, params, config) {
         if(this.image)
             ctx.drawImage(this.image, -this.width / 2, this.height / 2, this.width, this.height);
             
-        config.customRenderTransformed.apply(this, [ctx]);
+        config.customRender.apply(this, [ctx]);
             
         ctx.globalAlpha = 1;
         ctx.rotate(-this.r);
         ctx.translate(-this.x, -this.y);
         
-        config.customRender.apply(this, [ctx]);
+        config.customRenderAbsolute.apply(this, [ctx]);
     };
 };
