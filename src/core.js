@@ -121,6 +121,9 @@ Engine.prototype.Core = new function() {
         self.state.render(self.ctx);
 
         self.ctx.restore();
+
+        if(engine.isModuleLoaded("debug") && engine.Debug.enabled)
+            engine.Debug.render(game.ctx);
     };
 
     /** Registers the events that will be re-directed the the event listeners. */
