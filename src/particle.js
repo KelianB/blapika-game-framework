@@ -3,131 +3,196 @@
 */
 
 /** @class
- * @classdesc This class allow to spawn, render and update particles
- * @param {Number} minSpawnDx - Default 0
- * @param {Number} maxSpawnDx - Default 0
- * @param {Number} minSpawnDy - Default 0
- * @param {Number} maxSpawnDy - Default 0
- * @param {Number} minSpawnRotation - Not implemented
- * @param {Number} maxSpawnRotation - Not implemented
- * @param {Number} maxSpawnDr - Not implemented
- * @param {Number} minSpawnDr - Not implemented
- * @param {Number} maxDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
- * @param {Number} minDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
- * @param {Array} images - An array of Image objects. Images will be chosen randomly when rendering a particle
- * @param {Object} image - Do not use with the images params. Used to render a particle
- * @param {Boolean} fadeOut - Default false. Remove particles smoothly when set to true.
- * @param {Boolean} fadeSpeed - Default 0.1
- * @param {Number} minDx - Not implemented
- * @param {Number} maxDx - Not implemented
- * @param {Number} minDy - Not implemented
- * @param {Number} maxDy - Not implemented
- * @param {Number} opacity - Default 1.0
- * @param {Number} gravity - Default 0. Add its value every tick to dy
- * @param {Number} wind - Default 0. Add its value every tick to dx
- * @param {Number} rotateModifier - Default 0. Add its value every tick to dr
- * @param {Number} spawnCount - Default 10. Number of particle to spawn
+ * @classdesc This class allows to spawn, render and update particles
+ * @param {Object} config - The configuration of this particle spawner.
+ * 
+ * 
+ * ----------- REDO ----------- 
+ * @param {Number} config.minSpawnDx - Default 0
+ * @param {Number} config.maxSpawnDx - Default 0
+ * @param {Number} config.minSpawnDy - Default 0
+ * @param {Number} config.maxSpawnDy - Default 0
+ * @param {Number} config.minSpawnRotation - Not implemented
+ * @param {Number} config.maxSpawnRotation - Not implemented
+ * @param {Number} config.maxSpawnDr - Not implemented
+ * @param {Number} config.minSpawnDr - Not implemented
+ * @param {Number} config.maxDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
+ * @param {Number} config.minDuration - Default -1. Reduced by 1 every tick. Remove particle when reach 0
+ * @param {Array} config.images - An array of Image objects. Images will be chosen randomly when rendering a particle
+ * @param {Object} config.image - Do not use with the images params. Used to render a particle
+ * @param {Boolean} config.fadeOut - Default false. Remove particles smoothly when set to true.
+ * @param {Boolean} config.fadeSpeed - Default 0.1
+ * @param {Number} config.minDx - Not implemented
+ * @param {Number} config.maxDx - Not implemented
+ * @param {Number} config.minDy - Not implemented
+ * @param {Number} config.maxDy - Not implemented
+ * @param {Number} config.opacity - Default 1.0
+ * @param {Number} config.gravity - Default 0. Add its value every tick to dy
+ * @param {Number} config.wind - Default 0. Add its value every tick to dx
+ * @param {Number} config.rotateModifier - Default 0. Add its value every tick to dr
+ * @param {Number} config.spawnCount - Default 10. Number of particle to spawn
  */
-Engine.prototype.Particle = function(config) {
-    // Movement speed
-    this.minSpawnDx = config.minSpawnDx || 0;
-    this.maxSpawnDx = config.maxSpawnDx || 0;
-    this.minSpawnDy = config.minSpawnDy || 0;
-    this.maxSpawnDy = config.maxSpawnDy || 0;
-    // Rotation
-    this.minSpawnRotation = config.minSpawnRotation || 0; 
-    this.maxSpawnRotation = config.maxSpawnRotation || 0; 
-    this.maxSpawnDr = config.maxSpawnDr || 0;
-    this.minSpawnDr = config.MinSpawnDr || 0;
-    // Life time
-    this.maxDuration = config.maxDuration || -1;
-    this.minDuration = config.minDuration || -1;
-    // Image
-    this.images = config.images || [config.image];
+Engine.prototype.ParticleSpawner = function(config) {
+    var defaults = {
+        lifeTime: {min: 30, max: 50},
+        speed: {min: 4, max: 5},
+        spawnAngleIntervals: [{min: 0, max: Math.PI * 2}],
+        opacity: 1,
+        customRender: function() {},
+        customRenderTransformed: function() {},
+        customUpdate: function() {},
+        xMovement: {acceleration: 0, minSpeed: -1000, maxSpeed: 1000},
+        yMovement: {acceleration: 0, minSpeed: -1000, maxSpeed: 1000},
+        rotation: {acceleration: 0, minSpeed: 0, maxSpeed: 0, initial: {min: 0, max: 0}},
+        
+        width: 30,
+        height: 30,
+        fadeOutSpeed: 0,
+        fadeInSpeed: 0,
+        spawnCount: 5,
+        
+        onParticleAdded: function(particle) {},
+        onParticleRemoved: function(particle) {},
+    };  
+
+    this.config = {};
     
-    // Common to all particles
-    this.fadeOut = config.fadeOut || false;
-    this.fadeSpeed = config.fadeSpeed || 0.1;
-    this.minDx = config.minDx || 0;
-    this.maxDx = config.maxDx || 0;
-    this.minDy = config.minDy || 0;
-    this.maxDy = config.maxDy || 0;
-    this.opacity = config.opacity || 1;
-    this.gravity = config.gravity || 0;
-    this.wind = config.wind || 0; // "horizontal" gravity
-    this.rotateModifier = config.rotateModifier || 0;
-    this.spawnCount = config.spawnCount || 10;
+    for(var key in defaults) {
+        this.config[key] = typeof(config[key]) == "undefined" ? defaults[key] : config[key];
+    }
+
+    this.config.images = config.images || [config.image];
 
     this.particles = [];
     
-    /** Spawn particles using the specified configuration 
-     * @param {String} minSpawnX - Default undefined. Minimum x where to spawn particle
-     * @param {String} maxSpawnX - Default minSpawnX. Maximum x where to spawn particle
-     * @param {String} minSpawnY - Default undefined. Minimum y where to spawn particle
-     * @param {String} maxSpawnY - Default minSpawnX. Maximum y where to spawn particle
-     */
+    /** Spawn particles using the specified configuration */
     this.spawn = function(config) {
-        for(var i = 0; i < this.spawnCount; i++) {
-            this.particles.push({
-                opacity: this.opacity,
+        for(var key in this.config)
+            config[key] = config[key] || this.config[key];
+
+        for(var i = 0; i < config.spawnCount; i++) {
+            var angleInterval = randInArray(config.spawnAngleIntervals);
+
+            var p = new engine.Particle(this, {
                 x: randomInRange(config.minSpawnX, config.maxSpawnX || config.minSpawnX),
                 y: randomInRange(config.minSpawnY, config.maxSpawnY || config.minSpawnY),
-                dx: randomInRange(this.minSpawnDx, this.maxSpawnDx),
-                dy: randomInRange(this.minSpawnDy, this.maxSpawnDy),
-                r: randomInRange(this.minSpawnRotation, this.maxSpawnRotation),
-                dr: randomInRange(this.minSpawnDr, this.maxSpawnDr),
-                image: this.images[Math.floor(this.images.length * Math.random())],
-                lifeTime: randomInRange(this.minDuration, this.maxDuration)
-            });
+                angle: randomInRange(angleInterval.min, angleInterval.max),
+                speed: randomInRange(config.speed.min, config.speed.max),
+                image: randInArray(config.images),
+                lifeTime: Math.floor(randomInRange(config.lifeTime.min, config.lifeTime.max)),
+                rotation: randomInRange(config.rotation.initial.min, config.rotation.initial.max),
+            }, config);
+            
+            this.particles.push(p);
+            this.config.onParticleAdded(p);
         }
     };
 
     /** Updates the particles. Has to be called on each engine tick. */
     this.update = function(){
-        // TODO: Implement min and max dx / dy
         for(var i = 0; i < this.particles.length; i++) {
-            var particle = this.particles[i];
-            particle.lifeTime--;
-            
-            if(particle.lifeTime <= 0) {
-                if(this.fadeOut) {
-                    particle.opacity -= this.fadeSpeed;
-                    if(particle.opacity <= 0) {
-                        this.particles.splice(i, 1);
-                        i--;
-                        continue;
-                    }
-                }
-                else {
-                    this.particles.splice(i, 1);
-                    i--;
-                    continue;
-                }
+            if(!this.particles[i].update()) {
+                this.config.onParticleRemoved(this.particles[i]);
+                this.particles.splice(i--, 1);
             }
-            
-            particle.dx += this.wind;
-            particle.dy += this.gravity;
-            particle.dr += this.rotateModifier;
-            
-            particle.r += particle.dr;
-            particle.x += particle.dx;
-            particle.y += particle.dy;
-            
         }
     };
     
     /** Render the particles. Has to be called on each engine tick. */
     this.render = function(ctx) {
-        // TODO: Implement rotation
-        for(var i = 0; i < this.particles.length; i++) {
-            var particle = this.particles[i];
-            ctx.globalAlpha = particle.opacity;
-            ctx.drawImage(particle.image, particle.x, particle.y);
-            ctx.globalAlpha = 1;
-        }
+        for(var i = 0; i < this.particles.length; i++)
+            this.particles[i].render(ctx);
     };
     
-    function randomInRange(min, max) {
-        return Math.random() * (max-min+1) + min;
+    function randInArray(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];   
     }
+    
+    function randomInRange(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+};
+
+Engine.prototype.Particle = function(spawner, params, config) {
+    console.log(this)
+    this.x = params.x;
+    this.y = params.y;
+    this.r = params.rotation;
+    
+    this.width = config.width || (params.image ? params.image.width : 0);
+    this.height = config.height || (params.image ? params.image.height : 0);
+    
+    this.initialX = params.x;
+    this.initialY = params.y;
+    
+    this.dx = Math.cos(params.angle) * params.speed;
+    this.dy = Math.sin(params.angle) * params.speed;
+    this.dr = 0;
+    
+    this.livingTicks = 0;
+    this.lifeTime = params.lifeTime;
+    
+    this.image = params.image;
+    this.opacity = config.opacity;
+    
+    this.doneFadingIn = false;
+    
+    this.update = function() {
+        this.livingTicks++;
+
+        if(this.livingTicks == this.lifeTime)
+            return false;
+        
+        // Handle fade-in
+        if(config.fadeInSpeed && !this.doneFadingIn) {
+            this.opacity += config.fadeInSpeed;
+            if(this.opacity >= 1) {
+                this.opacity = 1;
+                this.doneFadingIn = true;
+            }
+        }
+        // Handle fade-out
+        else if(config.fadeOutSpeed) {
+            // Calculate the ending opacity if we were to start fading out now.
+            var endOpacity = this.opacity - (this.lifeTime - this.livingTicks) * config.fadeOutSpeed;
+            if(endOpacity > -config.fadeOutSpeed) {   
+                this.opacity -= config.fadeOutSpeed;
+                this.opacity = Math.max(0, this.opacity);
+            }
+        }
+
+        this.dx += config.xMovement.acceleration;
+        this.dx = Math.min(Math.max(this.dx, config.xMovement.minSpeed), config.xMovement.maxSpeed);
+        
+        this.dy += config.yMovement.acceleration;
+        this.dy = Math.min(Math.max(this.dy, config.yMovement.minSpeed), config.yMovement.maxSpeed);
+        
+        this.dr += config.rotation.acceleration;
+        this.dr = Math.min(Math.max(this.dr, config.rotation.minSpeed), config.rotation.maxSpeed);
+
+        this.r += this.dr;
+        this.x += this.dx;
+        this.y += this.dy;
+
+        config.customUpdate.apply(this);
+        
+        return true;
+    };
+    
+    this.render = function(ctx) {
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.r);
+        ctx.globalAlpha = this.opacity;
+        
+        if(this.image)
+            ctx.drawImage(this.image, -this.width / 2, this.height / 2, this.width, this.height);
+            
+        config.customRenderTransformed.apply(this, [ctx]);
+            
+        ctx.globalAlpha = 1;
+        ctx.rotate(-this.r);
+        ctx.translate(-this.x, -this.y);
+        
+        config.customRender.apply(this, [ctx]);
+    };
 };
