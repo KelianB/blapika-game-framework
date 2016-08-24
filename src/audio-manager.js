@@ -80,6 +80,7 @@ Engine.prototype.AudioManager = new function() {
         this.playing.push(audio);
 
         audio.muted = this.muted;
+        this.applyVolumeTransforms(audio);
         audio.play();
     };
 
