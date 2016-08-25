@@ -148,7 +148,7 @@ Engine.prototype.Core = new function() {
                 self.eventListeners[i].onMouseMove(self.mouse);
         });
 
-        self.viewport.wheel(function(e) {
+        self.viewport[0].addEventListener("wheel", function(e) {
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onWheel(e.deltaY);
         });
