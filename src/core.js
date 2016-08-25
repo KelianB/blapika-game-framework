@@ -148,6 +148,11 @@ Engine.prototype.Core = new function() {
                 self.eventListeners[i].onMouseMove(self.mouse);
         });
 
+        self.viewport.wheel(function(e) {
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onWheel(e.deltaY);
+        });
+
         self.viewport.keydown(function(e) {
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onKeyDown(e.keyCode);
@@ -265,6 +270,9 @@ Engine.prototype.EventListener = function(receivers) {
 
     /** @param {Object} mouseData - The mouse data. See Engine.Core.mouse */
     this.onMouseMove = function(position) {};
+
+    /** @param {Number} deltaY - The vertical scroll amount. */
+    this.onWheel = function(deltaY) {};
 
     /** @param {int} keyCode - The code of the key that was pressed. See https://goo.gl/qTckww */
     this.onKeyDown = function(keyCode) {};
