@@ -149,8 +149,11 @@ Engine.prototype.Core = new function() {
         });
 
         self.viewport[0].addEventListener("wheel", function(e) {
+            var wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
+            if(wheelDelta == "firefox sucks")
+                wheelDelta = e.deltaY * (100 / 3); // normalize delta on firefox
             for(var i = 0; i < self.eventListeners.length; i++)
-                self.eventListeners[i].onWheel(e.wheelDelta);
+                self.eventListeners[i].onWheel(wheelDelta);
         });
 
         self.viewport.keydown(function(e) {
