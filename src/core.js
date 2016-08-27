@@ -24,6 +24,12 @@ Engine.prototype.Core = new function() {
     /** Counts the number of updates. */
     this.tick = 0;
 
+    // This is used to fix weird lines appearing on the canvas on firefox
+    this.bitwiseRound = function(value) {
+        // ~~ is a double NOT bitwise operator, which acts as a substitute for Math.floor
+        return ~~(value + 0.5);
+    };
+
     /** Stores mouse data.
      * @property {number} x - The x position, relative to the game.
      * @property {number} y - The y position, relative to the game.
@@ -115,6 +121,8 @@ Engine.prototype.Core = new function() {
 
     /** Main rendering function. */
     var render = function() {
+        self.state.renderUnscaled(self.ctx);
+
         self.ctx.save();
         self.ctx.scale(self.renderScaling.x, self.renderScaling.y)
 
@@ -234,6 +242,8 @@ Engine.prototype.State = function() {
      * @param {CanvasRenderingContext2D} ctx - The context on which to render the state.
     */
     this.render = function(ctx) {};
+
+    this.renderUnscaled = function(ctx) {};
 
     /** Updates the variables required for this state to work. */
     this.update = function() {};
