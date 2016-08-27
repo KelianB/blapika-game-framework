@@ -111,7 +111,7 @@ Engine.prototype.ResourceManager = new function() {
             case this.types.DATA:
                 $.get(params.url, function(data) {
                     loaded(data);
-                }).error(function(e) {
+                }).fail(function(e) {
                     error(e)
                 });
                 break;
