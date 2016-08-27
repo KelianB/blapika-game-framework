@@ -1,160 +1,304 @@
 /*
-    global $ Engine
+    global $ Engine engine
 */
 
-/*
-    Dependencies:
-      - jQuery
-*/
-
-/** @class
- * @classdesc An utility class which simplifies the use of resources for JS apps. Handles loading, storage, errors, ...
+/** Creates an instance of the engine core.
+ * @class
+ * @classdesc A framework made for creating HTML5 apps that work on a canvas and use a main loop.
  */
-Engine.prototype.ResourceManager = new function() {
+Engine.prototype.Core = new function() {
     var self = this;
 
-    /** Resource types supported by this manager */
-    this.types = {IMAGE: "images", SOUND: "sounds", VIDEO: "videos", DATA: "data"};
-    /** Stores loaded resources of each type */
-    this.resources = {"images": {}, "sounds": {}, "videos": {}, "data": {}};
-    /** Current loading queue */
-    this.queue = [];
-
-    /** Returns a resource from its key.
-     * @param key {string} - The indexing key of the resource.
-     * @param type {string} - The type of the resource we're trying to get.
-     */
-    this.get = function(key, type) {return this.resources[type][key];};
-
-    /** Returns an image from its key.
-     * @param {string} key - The key of the requested image.
-     */
-    this.getImage = function(key) {return self.get(key, this.types.IMAGE);};
-
-    /** Returns a sound from its key.
-     * @param {string} key - The key of the requested sound.
-     */
-    this.getSound = function(key) {return self.get(key, this.types.SOUND);};
-
-    /** Returns a video from its key.
-     * @param {string} key - The key of the requested video.
-     */
-    this.getVideo = function(key) {return self.get(key, this.types.VIDEO);};
-
-    /** Returns data from its key.
-     * @param {string} key - The key of the requested data.
-     */
-    this.getData =  function(key) {return self.get(key, this.types.DATA);};
-
-    /** Adds an item to the queue.
-     * @param {Object} params - The parameters of the item to add to the queue {key, url, type, overwrite, onLoaded}.
-     */
-    this.addToQueue = function(params) {
-        if(this.resources[params.type])
-            this.queue.push(params);
-        else
-            console.error("Unknown type " + params.type + " for resource " + params.key);
+    // Default configuration
+    var defaultConfig = {
+        updateFrequency: 60,
+        width: 1280,
+        height: 720,
+        viewport: $("body"),
+        documentTitle: null
     };
 
-    /** Loads a single resource.
-     * @param {Object} params - Parameters that describe the resource to load.
-     *  @param {string} params.key - The storage key of the item.
-     *  @param {string} params.url - The URL from which to load the resource.
-     *  @param {Object} params.type - The type of content we're dealing with.
-     *  @param {boolean} [params.overwrite=false] - Whether or not we should overwrite a resource with the same key.
-     */
-    this.loadResource = function(params) {
-        var resource = this.get(params.key, params.type);
-        if(!params.overwrite && resource)
-            params.onLoaded(resource);
+    /** Current event listeners. */
+    this.eventListeners = [];
 
-        if(!params.key || !params.type || !params.url)
-            console.error("Error while loading resource " + (params.key || "") + ": missing parameters.");
+    /** Counts the number of updates. */
+    this.tick = 0;
 
-        function loaded(object) {
-            self.resources[params.type][params.key] = object;
-            if(params.onLoaded)
-                params.onLoaded();
-        }
-        function error() {
-            console.error("Error while loading resource " + params.key + ".");
-            if(params.onError)
-                params.onError();
-        }
-
-        switch(params.type) {
-            case this.types.IMAGE:
-                var image = new Image();
-                image.onload = function() {loaded(image);};
-                image.onerror = function(e) {error(e);};
-                image.src = params.url;
-                break;
-            case this.types.SOUND:
-                var sound = new Audio();
-                sound.oncanplaythrough = function() {
-                    // Prevent call on .play()
-                    this.oncanplaythrough = function(){};
-                    loaded(sound);
-                };
-                sound.onerror = function(e) {error(e);};
-                sound.src = params.url;
-                break;
-            case this.types.VIDEO:
-                var video = $("<video>");
-                video.append($("<source>").attr("src", params.url).attr("type", "video/mp4"));
-                video = video[0];
-                video.oncanplaythrough = function() {
-                    this.oncanplaythrough = function(){};
-                    loaded(video);
-                };
-                break;
-            case this.types.DATA:
-                $.get(params.url, function(data) {
-                    loaded(data);
-                }).fail(function(e) {
-                    error(e)
-                });
-                break;
-        }
+    // This is used to fix weird lines appearing on the canvas on firefox
+    this.bitwiseRound = function(value) {
+        // ~~ is a double NOT bitwise operator, which acts as a substitute for Math.floor
+        return ~~(value + 0.5);
     };
 
-    /** Loads resources from the queue.
-     * @param {Object} params - Callbacks {onProgress, onLoaded, onError}.
+    /** Stores mouse data.
+     * @property {number} x - The x position, relative to the game.
+     * @property {number} y - The y position, relative to the game.
+     * @property {number} canvasX - The x position, relative to the canvas.
+     * @property {number} canvasY - The y position, relative to the canvas.
+     * @property {Object} pressed - Whether or not each mouse button is being pressed. Example: {0: true, 1: false, 2: false}.
      */
-    this.loadQueue = function(params) {
-        var processedCount = 0, queueLength = this.queue.length;
+    this.mouse = {x: 0, y: 0, canvasX: 0, canvasY: 0, pressed: {}};
 
-        for(var i = 0; i < queueLength; i++) {
-            var item = this.queue[i];
-            (function(item){
-                self.loadResource({
-                    key: item.key,
-                    url: item.url,
-                    type: item.type,
-                    overwrite: item.overwrite,
-                    onLoaded: function() {
-                        processedCount++;
+    /** Stores the X and Y scaling used for rendering the game at its appropriate size on the canvas.
+     * @property {number} x - The scaling along the x-axis.
+     * @property {number} y - The scaling along the y-axis.
+     */
+    this.renderScaling = {x: 1, y: 1};
 
-                        if(item.onLoaded)
-                            item.onLoaded();
+    /** Initializes the framework.
+     * @param {Object} config - Contains all of the parameters required to initiate the framework.
+     *  @param {int} [config.updateFrequency=60] - The number of updates in one second.
+     *  @param {int} [config.width=1280] - The internal width of the game, in pixels.
+     *  @param {int} [config.height=720] - The internal height of the game, in pixels.
+     *  @param {jQuery-element} [config.viewport=body] - The viewport in which the canvas will be added and resized accordingly.
+     *  @param {string} [config.documentTitle] - The title of the document (shows up in the browser tab).
+     */
+    this.init = function(config) {
+        // Copy values from config to engine.
+        for(var key in defaultConfig)
+            self[key] = config[key] || defaultConfig[key];
 
-                        if(params.onProgress)
-                            params.onProgress(processedCount / queueLength, item.key);
+        // Calculate the interval between two frames, in milliseconds.
+        self.updateInterval = 1000 / self.updateFrequency;
 
-                        if(processedCount >= queueLength) {
-                            self.queue = [];
-                            if(params.onLoaded)
-                              params.onLoaded();
-                        }
-                    },
-                    onError: function(e) {
-                        processedCount++;
-                        console.error("Could not load resource " + item.key + ": " + e);
-                        if(params.onError)
-                            params.onError(item.key, e);
-                    }
-                });
-            }(item))
-        }
+        // Create a canvas
+        self.canvas = $("<canvas>")[0];
+        self.canvas.oncontextmenu = function(e){e.preventDefault();}; // prevents annoying context menus when right-clicking on the canvas.
+        self.ctx = self.canvas.getContext("2d");
+
+        // Add the canvas to the viewport.
+        self.viewport.append(self.canvas);
+
+        // Set page title.
+        if(self.documentTitle)
+            $("title").text(self.documentTitle);
+
+        // Sets a default empty state.
+        self.setState(new engine.State());
+
+        // Register events.
+        window.onresize = function() {
+            clearInterval(resizeTimeout);
+            resizeTimeout = setTimeout(onResize, 80);
+        };
+        registerEvents();
+
+        onResize();
     };
+
+    var resizeTimeout;
+
+    /** Resizes the canvas and updates the render scaling. */
+    var onResize = function() {
+        var vpWidth = self.viewport.width(),
+            vpHeight = self.viewport.height();
+
+        var heightToWidthRatio = self.height / self.width;
+
+        if(heightToWidthRatio > vpHeight / vpWidth) {
+            // Fit height and scale width to keep ratio
+            self.canvas.height = vpHeight;
+            self.canvas.width = self.canvas.height / heightToWidthRatio;
+        }
+        else {
+            // Fit width and scale height to keep ratio
+            self.canvas.width = vpWidth;
+            self.canvas.height = self.canvas.width * heightToWidthRatio;
+        }
+
+        self.renderScaling = {
+            x: self.canvas.width / self.width,
+            y: self.canvas.height / self.height
+        };
+    };
+
+    /** Main update function. */
+    var update = function() {
+        self.state.update();
+        self.state.tick++;
+        self.tick++;
+    };
+
+    this.applyScaling = function(ctx) {
+        ctx.scale(self.renderScaling.x, self.renderScaling.y)
+    };
+    this.removeScaling = function(ctx) {
+        ctx.scale(1 / self.renderScaling.x, 1 / self.renderScaling.y)
+    };
+
+    /** Main rendering function. */
+    var render = function() {
+        self.ctx.save();
+        self.applyScaling(self.ctx);
+
+        self.state.render(self.ctx);
+
+        self.ctx.restore();
+
+        if(engine.isModuleLoaded("debug") && engine.Debug.enabled)
+            engine.Debug.render(self.ctx);
+    };
+
+    /** Registers the events that will be re-directed the the event listeners. */
+    var registerEvents = function() {
+        self.viewport.mousedown(function(e) {
+            self.mouse.pressed[e.which] = true;
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onMouseDown(e.which);
+        });
+        self.viewport.mouseup(function(e) {
+            self.mouse.pressed[e.which] = false;
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onMouseUp(e.which);
+        });
+        self.viewport.mousemove(function(e) {
+            var rect = self.canvas.getBoundingClientRect();
+			self.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
+			self.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
+			self.mouse.x = (self.mouse.canvasX / self.canvas.width) * self.width;
+			self.mouse.y = (self.mouse.canvasY / self.canvas.height) * self.height;
+			for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onMouseMove(self.mouse);
+        });
+
+        self.viewport[0].addEventListener("wheel", function(e) {
+            var wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
+            if(wheelDelta == "firefox sucks")
+                wheelDelta = e.deltaY * (100 / 3); // normalize delta on firefox
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onWheel(wheelDelta);
+        });
+
+        self.viewport.keydown(function(e) {
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onKeyDown(e.keyCode);
+        });
+
+        self.viewport.keyup(function(e) {
+            for(var i = 0; i < self.eventListeners.length; i++)
+                self.eventListeners[i].onKeyUp(e.keyCode);
+        });
+    };
+
+    /** Adds an event listener.
+     * @param {EventListener} eventListener - The event listener to add.
+     */
+    this.addEventListener = function(eventListener) {
+        this.eventListeners.push(eventListener);
+    };
+
+    /** Removes a given event listener.
+     * @param {EventListener} eventListener - The event listener to remove.
+     */
+    this.removeEventListener = function(eventListener) {
+        var idx = this.eventListeners.indexOf(eventListener);
+        if(idx != -1)
+            this.eventListeners.splice(idx, 1);
+    };
+
+    /** Starts the main loop of the game. */
+    this.startLoop = function() {
+        var loop = function(lastTime, delta) {
+    	    var currentTime = Date.now();
+
+    	    // Elapsed milliseconds since last refresh (max of 1 second to avoid huge deltas when requestAnimationFrame is put in background)
+    	    delta += Math.min(1000, currentTime - lastTime);
+    	    // Use a while loop to catch up missed frames
+    	    while(delta >= self.updateInterval) {
+    	        update();
+    	        delta -= self.updateInterval;
+    	    }
+
+    	    render();
+
+    	    var lastTime = currentTime;
+    	    requestAnimationFrame(function() {
+    	        loop(currentTime, delta);
+    	    });
+        };
+
+        loop(Date.now(), 0);
+    };
+
+    /** Sets the state of the game.
+     * @param {Object} state - The new state value.
+    */
+    this.setState = function(state) {
+        if(this.state) {
+            this.state.onLeave();
+            this.removeEventListener(this.state.eventListener);
+        }
+
+        state.onEnter();
+        self.state = state;
+        this.addEventListener(this.state.eventListener);
+    };
+}
+
+/** Creates the structure of a state to be used in the game engine.
+ * @class
+ * @classdesc Represents one possible state for the app. See Game.setState.
+*/
+Engine.prototype.State = function() {
+    // Tick elapsed since the state was entered
+    this.tick = 0;
+
+    /** Renders the state. Note tat the engine handles the scaling for you before calling this function.
+     * @param {CanvasRenderingContext2D} ctx - The context on which to render the state.
+    */
+    this.render = function(ctx) {};
+
+    /** Updates the variables required for this state to work. */
+    this.update = function() {};
+
+    /** Fired by the engine when this state is left. */
+    this.onLeave = function() {};
+
+    /** Fired by the engine when this state is entered. */
+    this.onEnter = function() {};
+
+    /** Sets the event listener of this state.
+     * @param {EventListener} eventListener - The event listener.
+     */
+    this.setEventListener = function(eventListener) {
+        if(engine.Core.state == this) {
+            console.error("Cannot change event listener of current state.");
+            return;
+        }
+        this.eventListener = eventListener;
+    };
+
+    // Create an event listener for this state.
+    this.setEventListener(new engine.EventListener());
+}
+
+/** Creates an event listener.
+ * @class
+ * @classdesc Utility class that catches event fired by the used.class
+ * @param {Object} receivers - Functions that will be called when receiving an event.
+ */
+Engine.prototype.EventListener = function(receivers) {
+    /** @param {int} button - The mouse button that was pressed. */
+    this.onMouseDown = function(button) {};
+
+    /** @param {int} button - The mouse button that was released. */
+    this.onMouseUp = function(button) {};
+
+    /** @param {Object} mouseData - The mouse data. See Engine.Core.mouse */
+    this.onMouseMove = function(position) {};
+
+    /** @param {Number} wheelDelta - The scroll amount. */
+    this.onWheel = function(wheelDelta) {};
+
+    /** @param {int} keyCode - The code of the key that was pressed. See https://goo.gl/qTckww */
+    this.onKeyDown = function(keyCode) {};
+
+    /** @param {int} keyCode - The code of the key that was released. See https://goo.gl/qTckww */
+    this.onKeyUp = function(keyCode) {};
+
+    // Override listeners
+    for(var key in receivers) {
+        if(this[key])
+            this[key] = receivers[key];
+    }
 };
