@@ -9,8 +9,14 @@
  */
 Engine.prototype.AudioManager = new function() {
     var self = this;
+    
+    /** A global volume modifier by which the volume of all sounds will be multiplied. */
     this.volumeModifier = 1;
+    
+    /** An array of sounds that are playing. */
     this.playing = [];
+    
+    /** Whether or not the audio is muted. */
     this.muted = false;
 
     // -------- Audio prototype changes --------
@@ -19,8 +25,8 @@ Engine.prototype.AudioManager = new function() {
      * @param {Number} targetVolume - The volume at which the audio will end.
      * @param {Number} duration - The time it should take to reach the target volume, in milliseconds.
      */
-    Audio.prototype.fadeTo = function(targetVolume, duration) {
-        $(this).animate({volume: targetVolume}, duration);
+    Audio.prototype.fadeTo = function(targetVolume, duration, onComplete) {
+        return $(this).animate({absoluteVolume: targetVolume, volume: targetVolume * self.volumeModifier}, duration, null, onComplete);
     };
 
     /** Sets the volume of an Audio element.
@@ -37,7 +43,7 @@ Engine.prototype.AudioManager = new function() {
      * @param {Audio} audio - The target Audio element.
      */
     this.applyVolumeTransforms = function(audio) {
-        audio.absoluteVolume = audio.absoluteVolume || 1;
+        audio.absoluteVolume = typeof audio.absoluteVolume === "undefined" ? 1 : audio.absoluteVolume;
         audio.volume = audio.absoluteVolume * this.volumeModifier;
     };
 
@@ -55,8 +61,40 @@ Engine.prototype.AudioManager = new function() {
      * @param {Object} [fadeIn] - An object describing how to fade the audio (properties: start, end, duration).
      */
     this.playRepeatable = function(audio, fadeIn) {
-        this.play(audio.cloneNode(), false, fadeIn);
+        var clonedAudio = audio.cloneNode();
+        this.play(clonedAudio, false, fadeIn);
+        return clonedAudio;
     };
+    
+    /** Stops a given sound.
+     * @param {Audio} audio - The audio element to stop.
+     * @param {Number} [fadeOutDuration] - The duration during which the sound will fade out (in milliseconds).
+     */
+    this.stop = function(audio, fadeOutDuration) {
+        function endAndRemove() {
+            audio.pause();
+            audio.currentTime = 0;
+            
+            if(self.playing.indexOf(audio) != -1)
+                self.playing.splice(self.playing.indexOf(audio), 1);
+        }
+
+        if(audio.fadeOutAnimation)
+            audio.fadeOutAnimation.stop();
+         
+        if(typeof fadeOutDuration === "undefined")
+            endAndRemove();
+        else { 
+            // Handle fading out
+            if(!audio.initialVolume)
+                audio.initialVolume = audio.absoluteVolume;
+            audio.fadeOutAnimation = audio.fadeTo(0, fadeOutDuration, function() {
+                audio.fadeOutAnimation = null;
+                endAndRemove();
+            });
+        }
+    };
+    
 
     /** Plays audio.
      * @param {Audio} audio - The audio element to play.
@@ -64,42 +102,76 @@ Engine.prototype.AudioManager = new function() {
      * @param {Object} [fadeIn] - An object describing how to fade the audio (properties: start, end, duration).
      */
     this.play = function(audio, reset, fadeIn) {
+        if(!audio instanceof Audio) {
+            console.error("[AudioManager] Couldn't play audio! audio is not an instance of Audio.")
+            return;
+        }
+        if(audio.fadeOutAnimation)
+            audio.fadeOutAnimation.stop();
+        
+        // The following lines are here because the playRepeatable function clones the node, which doesn't keep the prototype functions.
+        if(!audio.fadeTo)
+            audio.fadeTo = Audio.prototype.fadeTo;
+        if(!audio.setVolume)
+            audio.setVolume = Audio.prototype.setVolume;
+        
         if(reset)
             audio.currentTime = 0;
-
-        if(fadeIn) {
-            audio.volume = fadeIn.start;
-            audio.fadeTo(fadeIn.end, fadeIn.duration);
+            
+        var playArgs = arguments;
+        
+        if(!audio.hasEndingListener) {
+            audio.addEventListener("ended", function() {
+                // Handle looping
+                var shouldLoop = audio.loopingCount && (audio.loopingCount == -1 || audio.loopingCount-- > 0);
+                if(shouldLoop) {
+                    if(audio.loopingCount == 0)
+                        delete audio.loopingCount; // stop looping
+                    else
+                        self.play.apply(self, playArgs); // play the sound again
+                }
+                else {
+                    // Remove from playing array
+                    self.playing.splice(self.playing.indexOf(audio), 1);
+                }
+            });
         }
-
-        audio.addEventListener("ended", function() {
-            // Remove from playing array
-            self.playing.splice(self.playing.indexOf(this), 1);
-        });
-
-        this.playing.push(audio);
+        audio.hasEndingListener = true;
 
         audio.muted = this.muted;
+        
+        // Reset the volume to what it was before it started to fade out
+        if(audio.initialVolume) {
+            audio.setVolume(audio.initialVolume);
+            delete audio.initialVolume;
+        }
+        
         this.applyVolumeTransforms(audio);
+        
+        // Handle fading in
+        if(fadeIn) {
+            audio.setVolume(fadeIn.start || 0);
+            audio.fadeTo(fadeIn.end || 1, fadeIn.duration);
+        }
+        
+        if(this.playing.indexOf(audio) == -1)
+            this.playing.push(audio);
+        
         audio.play();
+        return audio;
     };
 
     /** Plays audio repeatedly.
      * @param {Audio} audio - The audio element to play.
      * @param {Integer} [count=infinite] - How many times the audio should be played.
      */
-    this.loop = function(audio, count) {
-        if(count == undefined)
-            count = -1;
-
-        if(count != 0) {
-            self.play(audio, true);
-
-            audio.addEventListener("ended", function() {
-                console.log(this, --count);
-                self.loop(this, --count);
-            });
-        }
+    this.loop = function(audio, count, fadeIn) {
+        count = count || -1;
+        
+        audio.loopingCount = count;
+        self.play(audio, true, fadeIn);
+        
+        return audio;
     };
 
     /** Toggles mute for all audio elements. */
@@ -116,14 +188,12 @@ Engine.prototype.AudioManager = new function() {
     this.stopAll = function(fadeOutDuration) {
         for(var i = 0; i < this.playing.length; i++) {
             var audio = this.playing[i];
-            if(fadeOutDuration == undefined) {
-                audio.pause();
-                audio.currentTime = 0;
-            }
+            if(typeof fadeOutDuration == "undefined")
+                this.stop(audio);
             else {
                 audio.fadeTo(0, fadeOutDuration);
                 setTimeout(function(){
-                    audio.pause();
+                    self.stop(audio);
                 }, fadeOutDuration);
             }
         }
