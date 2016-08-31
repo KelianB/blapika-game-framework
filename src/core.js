@@ -45,6 +45,9 @@ Engine.prototype.Core = new function() {
      */
     this.renderScaling = {x: 1, y: 1};
 
+    /** A boolean that switches to true for a single tick whenever the renderScaling changes. */ 
+    this.hasScalingChanged = false;
+
     /** Initializes the framework.
      * @param {Object} config - Contains all of the parameters required to initiate the framework.
      *  @param {int} [config.updateFrequency=60] - The number of updates in one second.
@@ -110,6 +113,7 @@ Engine.prototype.Core = new function() {
             x: self.canvas.width / self.width,
             y: self.canvas.height / self.height
         };
+        self.hasScalingChanged = true;
     };
 
     /** Main update function. */
@@ -117,14 +121,21 @@ Engine.prototype.Core = new function() {
         self.state.update();
         self.state.tick++;
         self.tick++;
+        
+        self.hasScalingChanged = false; // reset
+    };
+
+    this.applyScaling = function(ctx) {
+        ctx.scale(self.renderScaling.x, self.renderScaling.y)
+    };
+    this.removeScaling = function(ctx) {
+        ctx.scale(1 / self.renderScaling.x, 1 / self.renderScaling.y)
     };
 
     /** Main rendering function. */
     var render = function() {
-        self.state.renderUnscaled(self.ctx);
-
         self.ctx.save();
-        self.ctx.scale(self.renderScaling.x, self.renderScaling.y)
+        self.applyScaling(self.ctx);
 
         self.state.render(self.ctx);
 
@@ -206,7 +217,6 @@ Engine.prototype.Core = new function() {
 
     	    render();
 
-    	    var lastTime = currentTime;
     	    requestAnimationFrame(function() {
     	        loop(currentTime, delta);
     	    });
@@ -242,8 +252,6 @@ Engine.prototype.State = function() {
      * @param {CanvasRenderingContext2D} ctx - The context on which to render the state.
     */
     this.render = function(ctx) {};
-
-    this.renderUnscaled = function(ctx) {};
 
     /** Updates the variables required for this state to work. */
     this.update = function() {};
