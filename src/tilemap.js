@@ -11,8 +11,8 @@ function bitwiseRound(value) {
  * @class
  * @classdesc Stores 2D maps and utility functions.
  */ 
-function Map(rawData) {
-    var that = this;
+function TileMap(rawData) {
+    var self = this;
     
     /** List of layers. */
     this.layers = [];
@@ -221,8 +221,8 @@ function Map(rawData) {
     /** Sorts the props by ascending bottom-y value. (mostly used in top-down games) */
     this.sortPropsByZ = function() {
         this.props.sort(function(a, b) {
-            var zA = a.y * that.tileSize + a.height,
-                zB = b.y * that.tileSize + b.height;
+            var zA = a.y * self.tileSize + a.height,
+                zB = b.y * self.tileSize + b.height;
             
             if(zA == zB)
                 return a.id - b.id;
