@@ -15,7 +15,8 @@ Engine.prototype.Core = new function() {
         width: 1280,
         height: 720,
         viewport: $("body"),
-        documentTitle: null
+        documentTitle: null,
+        globalRender: function(ctx) {}
     };
 
     /** Current event listeners. */
@@ -138,6 +139,7 @@ Engine.prototype.Core = new function() {
         self.applyScaling(self.ctx);
 
         self.state.render(self.ctx);
+        self.globalRender(self.ctx);
 
         self.ctx.restore();
 
