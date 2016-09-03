@@ -48,7 +48,7 @@ Engine.prototype.Debug = new function() {
      * @param {CanvasRenderingContext2D} ctx - The rendering context on which to draw the debug menu.
      */ 
     this.render = function(ctx) {
-        if(!this.enabled)
+        if(!this.enabled || this.lines.length == 0)
             return;
         
         ctx.textBaseline = "hanging"; 
