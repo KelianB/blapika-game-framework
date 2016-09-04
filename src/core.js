@@ -24,6 +24,9 @@ Engine.prototype.Core = new function() {
 
     /** Counts the number of updates. */
     this.tick = 0;
+    
+    /** Stores the keys that are pressed by keycode for easy access. */
+    this.keysPressed = {};
 
     // This is used to fix weird lines appearing on the canvas on firefox
     this.bitwiseRound = function(value) {
@@ -178,11 +181,15 @@ Engine.prototype.Core = new function() {
         });
 
         self.viewport.keydown(function(e) {
+            self.keysPressed[e.keyCode] = true;
+            
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onKeyDown(e.keyCode);
         });
 
         self.viewport.keyup(function(e) {
+            self.keysPressed[e.keyCode] = false;
+            
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onKeyUp(e.keyCode);
         });
