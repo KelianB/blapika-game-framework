@@ -181,17 +181,15 @@ Engine.prototype.Core = new function() {
         });
 
         self.viewport.keydown(function(e) {
-            self.keysPressed[e.keyCode] = true;
-            
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onKeyDown(e.keyCode);
+            self.keysPressed[e.keyCode] = true;
         });
 
         self.viewport.keyup(function(e) {
-            self.keysPressed[e.keyCode] = false;
-            
             for(var i = 0; i < self.eventListeners.length; i++)
                 self.eventListeners[i].onKeyUp(e.keyCode);
+            self.keysPressed[e.keyCode] = false;
         });
     };
 
