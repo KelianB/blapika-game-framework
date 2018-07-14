@@ -101,13 +101,14 @@ engine.Core = class Core {
                 this.eventListeners[i].onMouseUp(e.which);
         });
         this.viewport.mousemove((e) => {
-            let rect = this.canvas.getBoundingClientRect();
+            var rect = self.canvas.getBoundingClientRect();
+            var previousPos = {x: self.mouse.x, y: self.mouse.y};
 			this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
 			this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
-			this.mouse.x = (this.mouse.canvasX / this.canvas.width) * this.width;
-			this.mouse.y = (this.mouse.canvasY / this.canvas.height) * this.height;
+			this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
+			this.mouse.y = this.mouse.canvasY / this.renderScaling.y;
 			for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onMouseMove(this.mouse);
+                this.eventListeners[i].onMouseMove(this.mouse, previousPos, e);
         });
         this.viewport[0].addEventListener("wheel", (e) => {
             let wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
