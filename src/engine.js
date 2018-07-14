@@ -76,8 +76,10 @@ engine.State = class State {
     /** Fired by the engine when this state is left. */
     onLeave() {};
 
-    /** Fired by the engine when this state is entered. */
-    onEnter() {};
+    /** Fired by the engine when this state is entered.
+     * @param {State} previousState - The previous state of the app (null if there is none).
+     */
+    onEnter(previousState) {};
 
     /** Sets the event listener of this state.
      * @param {EventListener} eventListener - The event listener.

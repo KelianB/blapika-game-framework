@@ -167,7 +167,7 @@ engine.Core = class Core {
             this.removeEventListener(this.state.eventListener);
         }
 
-        state.onEnter();
+        state.onEnter(this.state);
         this.state = state;
         this.addEventListener(this.state.eventListener);
     };
