@@ -54,7 +54,7 @@ class TileMap {
 
         this._recalculateTilePositions = true;
 
-        this.parse(needsDecoding ? JSON.parse(LZString.decompressFromBase64(data) : data);
+        this.parse(needsDecoding ? JSON.parse(LZString.decompressFromBase64(data)) : data);
     }
 
     getScalingX() {return engine.Core.renderScaling.x * (this.camera ? this.camera.scaling : 1);}
