@@ -12,7 +12,7 @@ function bitwiseRound(value) {
  * @classdesc Stores 2D maps and utility functions.
  */
 class TileMap {
-    constructor(rawData) {
+    constructor(data, needsDecoding = true) {
         /** List of layers. */
         this.layers = [];
 
@@ -54,7 +54,7 @@ class TileMap {
 
         this._recalculateTilePositions = true;
 
-        this.parse(rawData);
+        this.parse(needsDecoding ? JSON.parse(LZString.decompressFromBase64(data) : data);
     }
 
     getScalingX() {return engine.Core.renderScaling.x * (this.camera ? this.camera.scaling : 1);}
@@ -233,9 +233,7 @@ class TileMap {
         });
     };
 
-    parse(rawData) {
-        let data = JSON.parse(LZString.decompressFromBase64(rawData));
-
+    parse(data) {
         for(let i = 0; i < data.layers.length; i++) {
             let l = new MapLayer(data.layers[i]);
             this.layers.push(l);
