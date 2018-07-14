@@ -29,8 +29,10 @@ Engine.prototype.Camera = function(config) {
         this.hasScalingChanged = false;
         
         if(this.attachedEntity) {
-            this.targetPosition.x = this.attachedEntity.x * this.scaling - (game.width / 2);
-            this.targetPosition.y = this.attachedEntity.y * this.scaling - (game.height / 2);
+            var w = this.attachedEntity.width || this.attachedEntity.w || 0;
+            var h = this.attachedEntity.height || this.attachedEntity.h || 0;
+            this.targetPosition.x = (this.attachedEntity.x + w / 2) * this.scaling - (game.width / 2);
+            this.targetPosition.y = (this.attachedEntity.y + h / 2) * this.scaling - (game.height / 2);
         }
         
         if(!this.isAtTargetPos()) {
