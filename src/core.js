@@ -8,6 +8,7 @@
  */
 engine.Core = class Core {
     constructor() {
+
         // Define default configuration
         Core.DEFAULT_CONFIG = {
             updateFrequency: 60,
@@ -15,6 +16,8 @@ engine.Core = class Core {
             height: 720,
             viewport: $("body"),
             documentTitle: null,
+            disableContextMenu: true,
+            disableAutoScaling: false,
             globalRender: (ctx) => {}
         };
 
@@ -70,8 +73,11 @@ engine.Core = class Core {
 
         // Create a canvas
         this.canvas = $("<canvas>")[0];
-        this.canvas.oncontextmenu = function(e){e.preventDefault();}; // prevents annoying context menus when right-clicking on the canvas.
         this.ctx = this.canvas.getContext("2d");
+
+        if(this.disableContextMenu)
+            this.canvas.oncontextmenu = function(e){e.preventDefault();}; // prevents annoying context menus when right-clicking on the canvas.
+
 
         // Add the canvas to the viewport.
         this.viewport.append(this.canvas);
@@ -84,7 +90,7 @@ engine.Core = class Core {
         this.setState(new engine.State());
 
         let resizeTimeout;
-        window.onresize = function() {
+        window.onresize = () => {
             clearInterval(resizeTimeout);
             resizeTimeout = setTimeout(this._onResize, 80);
         };
@@ -101,8 +107,8 @@ engine.Core = class Core {
                 this.eventListeners[i].onMouseUp(e.which);
         });
         this.viewport.mousemove((e) => {
-            var rect = self.canvas.getBoundingClientRect();
-            var previousPos = {x: self.mouse.x, y: self.mouse.y};
+            var rect = this.canvas.getBoundingClientRect();
+            var previousPos = {x: this.mouse.x, y: this.mouse.y};
 			this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
 			this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
 			this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
@@ -194,8 +200,20 @@ engine.Core = class Core {
 
     /** Resizes the canvas and updates the render scaling. */
     _onResize() {
-        let vpWidth = this.viewport.width(),
+        var vpWidth = this.viewport.width(),
             vpHeight = this.viewport.height();
+
+        if(this.disableAutoScaling) {
+            this.canvas.height = vpHeight;
+            this.canvas.width = vpWidth;
+            this.hasScalingChanged = true;
+
+            this.renderScaling = {
+                x: 1,
+                y: 1
+            };
+            return;
+        }
 
         let heightToWidthRatio = this.height / this.width;
 
