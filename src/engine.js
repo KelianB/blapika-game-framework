@@ -2,45 +2,42 @@
  * @class
  * @classdesc Manages modules.
  */
-class Engine() {
-    var allModules = ["core", "animation", "audio-manager", "resource-manager", "debug", "particle", "camera", "tilemap"];
-
+class Engine {
     constructor() {
+        Engine.MODULE_NAMES = ["core", "animation", "audio-manager", "resource-manager", "debug", "particle", "camera", "tilemap"];
+
         /** The current version of the engine. */
-        this.version = "0.1";
+        this.version = "0.2.0";
 
         /** The root of the module files. */
         this.root = "/";
 
         /** Stores loaded modules. */
         this.loadedModules = [];
-
     }
-
 
     /** Loads the given modules.
      * @param {Array} modules - The name of the modules to load.
      * @param {Function} [callback] - A function that will be called when the modules are done loading.
      */
     loadModules(modules, callback) {
-        var toLoad = modules.length;
+        let toLoad = modules.length;
 
-        for(var i = 0; i < modules.length; i++) {
-            (function(moduleName) {
-                $.getScript(self.root + moduleName + ".js", function() {
-                    self.loadedModules.push(moduleName);
-                    if(--toLoad == 0 && callback)
-                        callback();
-                })
-            })(modules[i]);
+        for(let i = 0; i < modules.length; i++) {
+            let m = modules[i];
+            $.getScript(this.root + m + ".js", () => {
+                this.loadedModules.push(m);
+                if(--toLoad == 0 && callback)
+                    callback();
+            });
         }
     };
 
     /** Loads all modules available in this engine.
      * @param {Function} [callback] - A function that will be called when the modules are done loading.
      */
-    loadAllModules = function(callback) {
-        this.loadModules(allModules, callback);
+    loadAllModules(callback) {
+        this.loadModules(Engine.MODULE_NAMES, callback);
     };
 
     /** Checks if a given module is loaded.
@@ -52,5 +49,4 @@ class Engine() {
     };
 };
 
-// Initialize the engine
-var engine = new Engine();
+let engine = new Engine();

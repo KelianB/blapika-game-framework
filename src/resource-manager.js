@@ -10,46 +10,46 @@
 /** @class
  * @classdesc An utility class which simplifies the use of resources for JS apps. Handles loading, storage, errors, ...
  */
-Engine.prototype.ResourceManager = new function() {
-    var self = this;
-
-    /** Resource types supported by this manager */
-    this.types = {IMAGE: "images", SOUND: "sounds", VIDEO: "videos", DATA: "data"};
-    /** Stores loaded resources of each type */
-    this.resources = {"images": {}, "sounds": {}, "videos": {}, "data": {}};
-    /** Current loading queue */
-    this.queue = [];
+engine.ResourceManager = class ResourceManager {
+    constructor() {
+        /** Resource types supported by this manager */
+        this.types = {IMAGE: "images", SOUND: "sounds", VIDEO: "videos", DATA: "data"};
+        /** Stores loaded resources of each type */
+        this.resources = {"images": {}, "sounds": {}, "videos": {}, "data": {}};
+        /** Current loading queue */
+        this.queue = [];
+    }
 
     /** Returns a resource from its key.
      * @param key {string} - The indexing key of the resource.
      * @param type {string} - The type of the resource we're trying to get.
      */
-    this.get = function(key, type) {return this.resources[type][key];};
+    get(key, type) {return this.resources[type][key];};
 
     /** Returns an image from its key.
      * @param {string} key - The key of the requested image.
      */
-    this.getImage = function(key) {return self.get(key, this.types.IMAGE);};
+    getImage(key) {return this.get(key, this.types.IMAGE);};
 
     /** Returns a sound from its key.
      * @param {string} key - The key of the requested sound.
      */
-    this.getSound = function(key) {return self.get(key, this.types.SOUND);};
+    getSound(key) {return this.get(key, this.types.SOUND);};
 
     /** Returns a video from its key.
      * @param {string} key - The key of the requested video.
      */
-    this.getVideo = function(key) {return self.get(key, this.types.VIDEO);};
+    getVideo(key) {return this.get(key, this.types.VIDEO);};
 
     /** Returns data from its key.
      * @param {string} key - The key of the requested data.
      */
-    this.getData =  function(key) {return self.get(key, this.types.DATA);};
+    getData(key) {return this.get(key, this.types.DATA);};
 
     /** Adds an item to the queue.
      * @param {Object} params - The parameters of the item to add to the queue {key, url, type, overwrite, onLoaded}.
      */
-    this.addToQueue = function(params) {
+    addToQueue(params) {
         if(this.resources[params.type])
             this.queue.push(params);
         else
@@ -63,16 +63,17 @@ Engine.prototype.ResourceManager = new function() {
      *  @param {Object} params.type - The type of content we're dealing with.
      *  @param {boolean} [params.overwrite=false] - Whether or not we should overwrite a resource with the same key.
      */
-    this.loadResource = function(params) {
-        var resource = this.get(params.key, params.type);
+    loadResource(params) {
+        let resource = this.get(params.key, params.type);
         if(!params.overwrite && resource)
             params.onLoaded(resource);
 
         if(!params.key || !params.type || !params.url)
             console.error("Error while loading resource " + (params.key || "") + ": missing parameters.");
 
+        let resources = this.resources;
         function loaded(object) {
-            self.resources[params.type][params.key] = object;
+            resources[params.type][params.key] = object;
             if(params.onLoaded)
                 params.onLoaded();
         }
@@ -84,13 +85,13 @@ Engine.prototype.ResourceManager = new function() {
 
         switch(params.type) {
             case this.types.IMAGE:
-                var image = new Image();
+                let image = new Image();
                 image.onload = function() {loaded(image);};
                 image.onerror = function(e) {error(e);};
                 image.src = params.url;
                 break;
             case this.types.SOUND:
-                var sound = new Audio();
+                let sound = new Audio();
                 sound.oncanplaythrough = function() {
                     // Prevent call on .play()
                     this.oncanplaythrough = function(){};
@@ -100,7 +101,7 @@ Engine.prototype.ResourceManager = new function() {
                 sound.src = params.url;
                 break;
             case this.types.VIDEO:
-                var video = $("<video>");
+                let video = $("<video>");
                 video.append($("<source>").attr("src", params.url).attr("type", "video/mp4"));
                 video = video[0];
                 video.oncanplaythrough = function() {
@@ -121,40 +122,40 @@ Engine.prototype.ResourceManager = new function() {
     /** Loads resources from the queue.
      * @param {Object} params - Callbacks {onProgress, onLoaded, onError}.
      */
-    this.loadQueue = function(params) {
-        var processedCount = 0, queueLength = this.queue.length;
+    loadQueue(params) {
+        let processedCount = 0, queueLength = this.queue.length;
 
-        for(var i = 0; i < queueLength; i++) {
-            var item = this.queue[i];
-            (function(item){
-                self.loadResource({
-                    key: item.key,
-                    url: item.url,
-                    type: item.type,
-                    overwrite: item.overwrite,
-                    onLoaded: function() {
-                        processedCount++;
+        for(let i = 0; i < queueLength; i++) {
+            let item = this.queue[i];
+            this.loadResource({
+                key: item.key,
+                url: item.url,
+                type: item.type,
+                overwrite: item.overwrite,
+                onLoaded: function() {
+                    processedCount++;
 
-                        if(item.onLoaded)
-                            item.onLoaded();
+                    if(item.onLoaded)
+                        item.onLoaded();
 
-                        if(params.onProgress)
-                            params.onProgress(processedCount / queueLength, item.key);
+                    if(params.onProgress)
+                        params.onProgress(processedCount / queueLength, item.key);
 
-                        if(processedCount >= queueLength) {
-                            self.queue = [];
-                            if(params.onLoaded)
-                              params.onLoaded();
-                        }
-                    },
-                    onError: function(e) {
-                        processedCount++;
-                        console.error("Could not load resource " + item.key + ": " + e);
-                        if(params.onError)
-                            params.onError(item.key, e);
+                    if(processedCount >= queueLength) {
+                        this.queue = [];
+                        if(params.onLoaded)
+                          params.onLoaded();
                     }
-                });
-            }(item))
+                },
+                onError: function(e) {
+                    processedCount++;
+                    console.error("Could not load resource " + item.key + ": " + e);
+                    if(params.onError)
+                        params.onError(item.key, e);
+                }
+            });
         }
     };
 };
+
+engine.resourceManager = new engine.ResourceManager();
