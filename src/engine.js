@@ -70,8 +70,10 @@ engine.State = class State {
     */
     render(ctx) {};
 
-    /** Updates the variables required for this state to work. */
-    update() {};
+    /** Updates the variables required for this state to work.
+     *  @param {int} dt - The number of microseconds by which the game should go forward in time.
+    */
+    update(dt) {};
 
     /** Fired by the engine when this state is left. */
     onLeave() {};

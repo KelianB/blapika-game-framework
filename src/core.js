@@ -187,8 +187,8 @@ engine.Core = class Core {
 
         // Use a while loop to catch up missed frames
         while(delta >= this.updateInterval) {
-            this._update();
-            delta -= this.updateInterval;
+           this._update(this.updateInterval * 1e3);
+           delta -= this.updateInterval;
         }
 
         this._render();
@@ -236,8 +236,8 @@ engine.Core = class Core {
     };
 
     /** Main update function. */
-    _update() {
-        this.state.update();
+    _update(dt) {
+        this.state.update(dt);
         this.state.tick++;
         this.tick++;
 
