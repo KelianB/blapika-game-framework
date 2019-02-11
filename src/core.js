@@ -14,7 +14,7 @@ engine.Core = class Core {
             updateFrequency: 60,
             width: 1280,
             height: 720,
-            viewport: $("body"),
+            viewport: document.getElementsByTagName("body")[0],
             documentTitle: null,
             disableContextMenu: true,
             disableAutoScaling: false,
@@ -72,19 +72,18 @@ engine.Core = class Core {
         this.updateInterval = 1000 / this.updateFrequency;
 
         // Create a canvas
-        this.canvas = $("<canvas>")[0];
+        this.canvas =  document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
 
         if(this.disableContextMenu)
             this.canvas.oncontextmenu = function(e){e.preventDefault();}; // prevents annoying context menus when right-clicking on the canvas.
-
 
         // Add the canvas to the viewport.
         this.viewport.append(this.canvas);
 
         // Set page title.
         if(this.documentTitle)
-            $("title").text(this.documentTitle);
+            document.title = this.documentTitle;
 
         // Sets a default empty state.
         this.setState(new engine.State());
@@ -92,43 +91,43 @@ engine.Core = class Core {
         let resizeTimeout;
         window.onresize = () => {
             clearInterval(resizeTimeout);
-            resizeTimeout = setTimeout(this._onResize, 80);
+            resizeTimeout = setTimeout(() => {this._onResize()}, 80);
         };
 
         // Register the events that will be re-dericted to event listeners.
-        this.viewport.mousedown((e) => {
+        this.viewport.addEventListener("mousedown", (e) => {
             this.mouse.pressed[e.which] = true;
             for(let i = 0; i < this.eventListeners.length; i++)
                 this.eventListeners[i].onMouseDown(e.which);
         });
-        this.viewport.mouseup((e) => {
+        this.viewport.addEventListener("mouseup", (e) => {
             this.mouse.pressed[e.which] = false;
             for(let i = 0; i < this.eventListeners.length; i++)
                 this.eventListeners[i].onMouseUp(e.which);
         });
-        this.viewport.mousemove((e) => {
-            var rect = this.canvas.getBoundingClientRect();
-            var previousPos = {x: this.mouse.x, y: this.mouse.y};
-			this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
-			this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
-			this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
-			this.mouse.y = this.mouse.canvasY / this.renderScaling.y;
-			for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onMouseMove(this.mouse, previousPos, e);
+        this.viewport.addEventListener("mousemove", (e) => {
+            let rect = this.canvas.getBoundingClientRect();
+            let previousPos = {x: this.mouse.x, y: this.mouse.y};
+            this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
+            this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
+            this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
+            this.mouse.y = this.mouse.canvasY / this.renderScaling.y;
+            for(let i = 0; i < this.eventListeners.length; i++)
+               this.eventListeners[i].onMouseMove(this.mouse, previousPos, e);
         });
-        this.viewport[0].addEventListener("wheel", (e) => {
+        this.viewport.addEventListener("wheel", (e) => {
             let wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
             if(wheelDelta == "firefox sucks")
                 wheelDelta = e.deltaY * (100 / 3); // normalize delta on firefox
             for(let i = 0; i < this.eventListeners.length; i++)
                 this.eventListeners[i].onWheel(wheelDelta);
         });
-        this.viewport.keydown((e) => {
+        this.viewport.addEventListener("keydown", (e) => {
             for(let i = 0; i < this.eventListeners.length; i++)
                 this.eventListeners[i].onKeyDown(e.keyCode);
             this.keysPressed[e.keyCode] = true;
         });
-        this.viewport.keyup((e) => {
+        this.viewport.addEventListener("keyup", (e) => {
             for(let i = 0; i < this.eventListeners.length; i++)
                 this.eventListeners[i].onKeyUp(e.keyCode);
             this.keysPressed[e.keyCode] = false;
@@ -200,8 +199,8 @@ engine.Core = class Core {
 
     /** Resizes the canvas and updates the render scaling. */
     _onResize() {
-        var vpWidth = this.viewport.width(),
-            vpHeight = this.viewport.height();
+        let vpWidth = this.viewport.clientWidth,
+            vpHeight = this.viewport.clientHeight;
 
         if(this.disableAutoScaling) {
             this.canvas.height = vpHeight;
