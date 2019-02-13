@@ -25,11 +25,17 @@ class Engine {
 
       for(let i = 0; i < modules.length; i++) {
          let m = modules[i];
-         Engine._loadScript(this.root + m + ".js", () => {
-            this.loadedModules.push(m);
-            if(--toLoad == 0 && callback)
-                 callback();
-         });
+         if(Engine.MODULE_NAMES.indexOf(m) == -1) {
+            console.error("Module", m, "does not exist.")
+            toLoad--;
+         }
+         else {
+            Engine._loadScript(this.root + m + ".js", () => {
+               this.loadedModules.push(m);
+               if(--toLoad == 0 && callback)
+                    callback();
+            });
+         }
       }
    }
 
