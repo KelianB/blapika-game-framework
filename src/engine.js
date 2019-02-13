@@ -56,6 +56,26 @@ class Engine {
       scriptTag.onload = onLoad;
       scriptTag.src = src;
    }
+
+   static httpGet(url, callbacks) {
+      let httpRequest = new XMLHttpRequest();
+      httpRequest.addEventListener("load", function(e) {
+         if(e.target.status == 200) {
+            if(callbacks.hasOwnProperty("onLoaded"))
+               callbacks.onLoaded(e.target.responseText);
+         }
+         else {
+            if(callbacks.hasOwnProperty("onError"))
+               callbacks.onError(e.target);
+         }
+      });
+      httpRequest.addEventListener("error", function(e) {
+         if(callbacks.hasOwnProperty("onError"))
+            callbacks.onError(e.target);
+      });
+      httpRequest.open("GET", url);
+      httpRequest.send();
+   }
 };
 
 let engine = new Engine();
