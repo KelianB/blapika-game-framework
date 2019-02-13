@@ -1,5 +1,5 @@
 /*
-    global $ Engine
+    global Engine
 */
 
 /*
@@ -24,27 +24,27 @@ engine.ResourceManager = class ResourceManager {
      * @param key {string} - The indexing key of the resource.
      * @param type {string} - The type of the resource we're trying to get.
      */
-    get(key, type) {return this.resources[type][key];};
+    get(key, type) {return this.resources[type][key];}
 
     /** Returns an image from its key.
      * @param {string} key - The key of the requested image.
      */
-    getImage(key) {return this.get(key, this.types.IMAGE);};
+    getImage(key) {return this.get(key, this.types.IMAGE);}
 
     /** Returns a sound from its key.
      * @param {string} key - The key of the requested sound.
      */
-    getSound(key) {return this.get(key, this.types.SOUND);};
+    getSound(key) {return this.get(key, this.types.SOUND);}
 
     /** Returns a video from its key.
      * @param {string} key - The key of the requested video.
      */
-    getVideo(key) {return this.get(key, this.types.VIDEO);};
+    getVideo(key) {return this.get(key, this.types.VIDEO);}
 
     /** Returns data from its key.
      * @param {string} key - The key of the requested data.
      */
-    getData(key) {return this.get(key, this.types.DATA);};
+    getData(key) {return this.get(key, this.types.DATA);}
 
     /** Adds an item to the queue.
      * @param {Object} params - The parameters of the item to add to the queue {key, url, type, overwrite, onLoaded}.
@@ -54,7 +54,7 @@ engine.ResourceManager = class ResourceManager {
             this.queue.push(params);
         else
             console.error("Unknown type " + params.type + " for resource " + params.key);
-    };
+    }
 
     /** Loads a single resource.
      * @param {Object} params - Parameters that describe the resource to load.
@@ -77,47 +77,59 @@ engine.ResourceManager = class ResourceManager {
             if(params.onLoaded)
                 params.onLoaded();
         }
-        function error() {
+        function error(e) {
             console.error("Error while loading resource " + params.key + ".");
-            if(params.onError)
-                params.onError();
+            if(params.hasOwnProperty("onError"))
+                params.onError(e);
         }
 
         switch(params.type) {
-            case this.types.IMAGE:
+            case this.types.IMAGE: {
                 let image = new Image();
-                image.onload = function() {loaded(image);};
-                image.onerror = function(e) {error(e);};
+                image.addEventListener("load", () => {loaded(image);});
+                image.addEventListener("error", error);
                 image.src = params.url;
                 break;
-            case this.types.SOUND:
+            }
+            case this.types.SOUND: {
                 let sound = new Audio();
-                sound.oncanplaythrough = function() {
-                    // Prevent call on .play()
-                    this.oncanplaythrough = function(){};
+                let onCanPlayThrough = () => {
+                    sound.removeEventListener("canplaythrough", onCanPlayThrough);
                     loaded(sound);
                 };
-                sound.onerror = function(e) {error(e);};
+                sound.addEventListener("canplaythrough", onCanPlayThrough);
+                sound.addEventListener("error", error);
                 sound.src = params.url;
                 break;
-            case this.types.VIDEO:
-                let video = $("<video>");
-                video.append($("<source>").attr("src", params.url).attr("type", "video/mp4"));
-                video = video[0];
-                video.oncanplaythrough = function() {
-                    this.oncanplaythrough = function(){};
+             }
+            case this.types.VIDEO: {
+                let video = document.createElement("video");
+                let source = document.createElement("source");
+
+                let onCanPlayThrough = () => {
+                    video.removeEventListener("canplaythrough", onCanPlayThrough);
                     loaded(video);
                 };
+                video.addEventListener("canplaythrough", onCanPlayThrough);
+                source.addEventListener("error", error);
+                source.src = params.url;
+                source.type = "video/mp4";
+                video.append(source);
                 break;
-            case this.types.DATA:
-                $.get(params.url, function(data) {
-                    loaded(data);
-                }).fail(function(e) {
-                    error(e)
-                });
-                break;
+             }
+            case this.types.DATA: {
+               Engine.httpGet(params.url, {
+                  onLoaded: (data) => {
+                     loaded(data);
+                  },
+                  onError: (t) => {
+                     error(t);
+                  }
+               });
+               break;
+            }
         }
-    };
+    }
 
     /** Loads resources from the queue.
      * @param {Object} params - Callbacks {onProgress, onLoaded, onError}.
@@ -155,7 +167,7 @@ engine.ResourceManager = class ResourceManager {
                 }
             });
         }
-    };
+    }
 };
 
 engine.resourceManager = new engine.ResourceManager();
