@@ -33,84 +33,86 @@
 /** @class
  * @classdesc An utility class which handles the display of debugging info.
  */
-Engine.prototype.Debug = new function() {
-    /** The code of the key that toggles the debug. */
-    this.toggleKey = 101;
-    
-    /** Whether or not the debug mode is enabled. */
-    this.enabled = true;
-    
-    /** The lines that are displayed on the debug menu. */
-    this.lines = [];
-    
-    /** The style of the debug menu.
-     * @property {int} fontSize=14
-     * @property {int} lineHeight=16
-     * @property {string} font=Consolas
-     * @property {string} color=rgb(255,255,255)
-     * @property {string} backgroundColor=rgba(40,40,40,0.7)
-     * @property {number} x=0
-     * @property {number} y=0
-     * @property {number} padding=6
-     */
-    this.debugStyle = {
-        fontSize: 14,
-        lineHeight: 16,
-        font: "Consolas",
-        color: "rgb(255, 255, 255)",
-        backgroundColor: "rgba(40, 40, 40, 0.7)",
-        x: 0,
-        y: 0,
-        padding: 6
-    };
-    
+engine.Debug = class Debug {
+    constructor() {
+        /** The code of the key that toggles the debug. */
+        this.toggleKey = 101;
+
+        /** Whether or not the debug mode is enabled. */
+        this.enabled = true;
+
+        /** The lines that are displayed on the debug menu. */
+        this.lines = [];
+
+        /** The style of the debug menu.
+         * @property {int} fontSize=14
+         * @property {int} lineHeight=16
+         * @property {string} font=Consolas
+         * @property {string} color=rgb(255,255,255)
+         * @property {string} backgroundColor=rgba(40,40,40,0.7)
+         * @property {number} x=0
+         * @property {number} y=0
+         * @property {number} padding=6
+         */
+        this.debugStyle = {
+            fontSize: 14,
+            lineHeight: 16,
+            font: "Consolas",
+            color: "rgb(255, 255, 255)",
+            backgroundColor: "rgba(40, 40, 40, 0.7)",
+            x: 0,
+            y: 0,
+            padding: 6
+        };
+    }
+
     /** Adds a line to the rendered debug info.
      * @param {string} name - The value's name.
      * @param {string} value - The value.
-     */ 
-    this.addLine = function(name, value, expectations) {
+     */
+    addLine(name, value, expectations) {
         this.lines.push({name: name, value: value, expectations: expectations});
     };
-    
+
     /** Renders the debug menu.
      * @param {CanvasRenderingContext2D} ctx - The rendering context on which to draw the debug menu.
-     */ 
-    this.render = function(ctx) {
-        if(!this.enabled)
+     */
+    render(ctx) {
+        if(!this.enabled || this.lines.length == 0)
             return;
-        
-        ctx.textBaseline = "hanging"; 
+
+        ctx.textBaseline = "hanging";
         ctx.font = this.debugStyle.fontSize + "px " + this.debugStyle.font;
-        
+
         // Calculate max width
-        var maxWidthName = 0, maxWidthValue = 0;
-        for(var i = 0; i &lt; this.lines.length; i++) {
-            var nameLen = ctx.measureText(this.lines[i].name).width;
+        let maxWidthName = 0, maxWidthValue = 0;
+        for(let i = 0; i &lt; this.lines.length; i++) {
+            let nameLen = ctx.measureText(this.lines[i].name).width;
             if(nameLen > maxWidthName)
                 maxWidthName = nameLen;
 
-            var valueLen = ctx.measureText(this.lines[i].value).width;
+            let valueLen = ctx.measureText(this.lines[i].value).width;
             if(valueLen > maxWidthValue)
                 maxWidthValue = valueLen;
         }
-        
+
         // Calculate dimensions
-        var width =  2 * this.debugStyle.padding + maxWidthValue + maxWidthName + ctx.measureText(" : ").width,
+        let width =  2 * this.debugStyle.padding + maxWidthValue + maxWidthName + ctx.measureText(" : ").width,
             height = 2 * this.debugStyle.padding + this.lines.length * this.debugStyle.lineHeight - (this.debugStyle.lineHeight - this.debugStyle.fontSize);
-            
+
         // Draw background
         ctx.fillStyle = this.debugStyle.backgroundColor;
         ctx.fillRect(this.debugStyle.x, this.debugStyle.y, width, height);
-        
+
         ctx.textAlign = "left";
-        
-        var totalNameLength = Math.floor(maxWidthName / ctx.measureText(" ").width);
-        
+
+        let totalNameLength = Math.floor(maxWidthName / ctx.measureText(" ").width);
+
         // Draw lines
-        for(var i = 0; i &lt; this.lines.length; i++) {
-            var l = this.lines[i];
+        for(let i = 0; i &lt; this.lines.length; i++) {
+            let l = this.lines[i];
             ctx.fillStyle = this.debugStyle.color;
-            
+
             if(l.expectations) {
                 if((l.expectations.boolean  != undefined &amp;&amp; l.expectations.boolean != l.value) ||
                    (l.expectations.maxValue != undefined &amp;&amp; l.value > l.expectations.maxValue) ||
@@ -119,20 +121,23 @@ Engine.prototype.Debug = new function() {
                 }
             }
 
-            var str = l.name + (" ").repeat(totalNameLength - l.name.length) + " : " + l.value;
+            let str = l.name + (" ").repeat(totalNameLength - l.name.length) + " : " + l.value;
             ctx.fillText(str, this.debugStyle.x + this.debugStyle.padding, this.debugStyle.y + this.debugStyle.padding + i * this.debugStyle.lineHeight);
         }
-        
+
         this.lines = [];
     };
-    
+
     /** Sets the key used to toggle the debug menu.
      * @param {int} key - The keyCode of the toggling key.
      */
-    this.setToggleKey = function(key) {
+    setToggleKey(key) {
         this.toggleKey = key;
     };
-};</code></pre>
+};
+
+engine.debug = new engine.Debug();
+</code></pre>
         </article>
     </section>
 
@@ -142,13 +147,13 @@ Engine.prototype.Debug = new function() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="Engine_Animation.html">Animation</a></li><li><a href="Engine_AudioManager.html">AudioManager</a></li><li><a href="Engine_Core.html">Core</a></li><li><a href="Engine_Debug.html">Debug</a></li><li><a href="Engine_EventListener.html">EventListener</a></li><li><a href="Engine_ParticleSpawner.html">ParticleSpawner</a></li><li><a href="Engine_ResourceManager.html">ResourceManager</a></li><li><a href="Engine_State.html">State</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="engine.Animation.html">Animation</a></li><li><a href="engine.AudioManager.html">AudioManager</a></li><li><a href="engine.Camera.html">Camera</a></li><li><a href="engine.Core.html">Core</a></li><li><a href="engine.Debug.html">Debug</a></li><li><a href="engine.EventListener.html">EventListener</a></li><li><a href="engine.ParticleSpawner.html">ParticleSpawner</a></li><li><a href="engine.ResourceManager.html">ResourceManager</a></li><li><a href="engine.State.html">State</a></li><li><a href="MapLayer.html">MapLayer</a></li><li><a href="TileMap.html">TileMap</a></li><li><a href="Tileset.html">Tileset</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Wed Aug 24 2016 23:37:59 GMT+0200 (Paris, Madrid (heure d’été))
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Feb 13 2019 16:48:35 GMT+0100 (GMT+01:00)
 </footer>
 
 <script> prettyPrint(); </script>

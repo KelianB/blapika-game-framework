@@ -33,38 +33,100 @@
 /** Creates an animation.
  * @class
  * @classdesc Utility class that handles animations from a list of images
- * @param {Array} images - An array of Image objects.
+ * @param {Image} image - The sprite that will contain every frame of the animation.
  * @param {(int|Array)} delays - An array or a constant defining the number of frames between two images.
- */ 
-Engine.prototype.Animation = function(images, delays) {
-    this.images = images;
-    this.delays = delays;
-    this.index = 0;
-    
-    // If the delay parameter is a constant, put it in an array 
-    if(Number.isInteger(delays)) {
-        this.delays = [];
-        for(var i = 0; i &lt; images.length; i++)
-            this.delays[i] = delays;
+ */
+engine.Animation = class Animation {
+    constructor(image, numSprites, delays) {
+        this.image = image;
+        this.delays = delays;
+
+        // Index of the current frame
+        this.index = 0;
+
+        // Stores a function that gets called when the playCount reaches 0
+        this.onDonePlaying = null;
+
+        // Whether or not the animation is playing
+        this.frozen = false;
+
+        // Whether or not the animation is reversed
+        this.reverse = false;
+
+        // The number of times to play the animation
+        this.playCount = 100;
+
+        // If the delay parameter is a constant, put it in an array
+        if(Number.isInteger(delays)) {
+            this.delays = [];
+            for(let i = 0; i &lt; numSprites; i++)
+                this.delays[i] = delays;
+        }
+
+        // The number of ticks before the next frame
+        this.toNextFrame = this.delays[0];
     }
-    
+
     /** Updates the animation. Has to be called on each engine tick. */
-    this.update = function() {
+    update() {
+        if(this.frozen)
+            return;
+
         this.toNextFrame--;
 
         if(this.toNextFrame == 0) {
-            this.index = (this.index + 1) % this.images.length;
-            this.toNextFrame = this.delays[this.index];
+            // Move to the next frame
+            let nextIndex = this.index + (this.reverse ? -1 : 1);
+
+            // Start the animation again if we're at the end
+            if(this.reverse) {
+                if(nextIndex &lt; 0)
+                    nextIndex = numSprites - 1;
+            }
+            else if(nextIndex > numSprites - 1)
+               nextIndex = 0;
+
+            this.toNextFrame = this.delays[nextIndex];
+
+            if(this.playCount != -1) {
+                // If we've reached the last frame of the animation
+                if((!this.reverse &amp;&amp; nextIndex == 0) || (this.reverse &amp;&amp; nextIndex == numSprites - 1)) {
+                    if(--this.playCount == 0) {
+                        this.frozen = true;
+                        if(this.onDonePlaying) {
+                            this.onDonePlaying();
+                            this.onDonePlaying = null;
+                        }
+                    }
+                    return;
+                }
+            }
+            this.index = nextIndex;
         }
     };
-    
-    /** Returns the current image of this animation.
-     * @returns {Image} - The current image.
+
+    /** Pauses the animation.
+     * @param {Integer} [frameIndex] - The frame on which to pause the animation (if not specified, freezes the animation at its current frame).
      */
-    this.getCurrentImage = function() {
-        return this.images[this.index]; 
-    }; 
-    
+    pause(frameIndex) {
+        if(typeof frameIndex !== "undefined")
+            this.index = frameIndex;
+        this.toNextFrame = this.delays[this.index];
+        this.frozen = true;
+    };
+
+    /** Plays the animation.
+     * @param {Integer} [playCount=1] - The amount of times the animation will play.
+     * @param {Function} [onDonePlaying] - A function that will be called when the animation stops playing (when the playCount reaches 0).
+     * @param {Boolean} [reverse=false] - Whether or not the animation should play in reverse.
+     */
+    play(playCount, onDonePlaying, reverse) {
+        this.playCount = playCount || 1;
+        this.reverse = reverse || this.reverse;
+        this.onDonePlaying = onDonePlaying;
+        this.frozen = false;
+    };
+
     /** Renders the animation
      * @param {CanvasRenderingContext2D} ctx - The rendering context on which to draw the image.
      * @param {number} x
@@ -72,10 +134,14 @@ Engine.prototype.Animation = function(images, delays) {
      * @param {number} width
      * @param {number} height
      */
-    this.render = function(ctx, x, y, width, height) {
-        ctx.drawImage(this.getCurrentImage(), x, y, width, height);    
+    render(ctx, x, y, width, height) {
+        let frameWidth = this.image.width / numSprites;
+        ctx.drawImage(this.image,
+                        frameWidth * this.index, 0, frameWidth, this.image.height,
+                        x, y, width, height);
     };
-}</code></pre>
+}
+</code></pre>
         </article>
     </section>
 
@@ -85,13 +151,13 @@ Engine.prototype.Animation = function(images, delays) {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="Engine_Animation.html">Animation</a></li><li><a href="Engine_AudioManager.html">AudioManager</a></li><li><a href="Engine_Core.html">Core</a></li><li><a href="Engine_Debug.html">Debug</a></li><li><a href="Engine_EventListener.html">EventListener</a></li><li><a href="Engine_ParticleSpawner.html">ParticleSpawner</a></li><li><a href="Engine_ResourceManager.html">ResourceManager</a></li><li><a href="Engine_State.html">State</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="engine.Animation.html">Animation</a></li><li><a href="engine.AudioManager.html">AudioManager</a></li><li><a href="engine.Camera.html">Camera</a></li><li><a href="engine.Core.html">Core</a></li><li><a href="engine.Debug.html">Debug</a></li><li><a href="engine.EventListener.html">EventListener</a></li><li><a href="engine.ParticleSpawner.html">ParticleSpawner</a></li><li><a href="engine.ResourceManager.html">ResourceManager</a></li><li><a href="engine.State.html">State</a></li><li><a href="MapLayer.html">MapLayer</a></li><li><a href="TileMap.html">TileMap</a></li><li><a href="Tileset.html">Tileset</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Wed Aug 24 2016 23:37:59 GMT+0200 (Paris, Madrid (heure d’été))
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Feb 13 2019 16:48:35 GMT+0100 (GMT+01:00)
 </footer>
 
 <script> prettyPrint(); </script>

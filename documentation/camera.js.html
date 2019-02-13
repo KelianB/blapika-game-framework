@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: camera.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: camera.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+    global Engine engine
+*/
+
+/** @class
+ * @classdesc Describe class here.
+ *
+ */
+engine.Camera = class Camera {
+    constructor(config) {
+        config = config || {};
+
+        this.speed = {x: 0.2, y: 0.2};
+        this.bounds = {minX: null, maxX: null, minY: null, maxY: null};
+
+        this.scalingPoint = {x: 0, y: 0};
+        this.scaling = config.scaling || 1;
+        this.targetScaling = config.scaling || 1;
+        this.scalingSpeed = 0.2;
+        this.onScalingFinished = null;
+
+        this.rotation = 0;
+
+        this.position = {x: 0, y: 0};
+        this.targetPosition = {x: 0, y: 0};
+        this.onTranslationFinished = null;
+        this.attachedEntity = null;
+
+        this.hasScalingChanged = false;
+        this._MIN_SCALING = 0.075;
+    }
+
+    update() {
+        this.hasScalingChanged = false;
+
+        if(this.attachedEntity) {
+            var w = this.attachedEntity.width || this.attachedEntity.w || 0;
+            var h = this.attachedEntity.height || this.attachedEntity.h || 0;
+            this.targetPosition.x = (this.attachedEntity.x + w / 2) * this.scaling - (engine.core.width / 2);
+            this.targetPosition.y = (this.attachedEntity.y + h / 2) * this.scaling - (engine.core.height / 2);
+        }
+
+        if(!this.isAtTargetPos()) {
+            this.position.x += (this.targetPosition.x - this.position.x) * this.speed.x;
+            this.position.y += (this.targetPosition.y - this.position.y) * this.speed.y;
+
+            if(Math.abs(this.targetPosition.x - this.position.x) &lt; 0.001)
+                this.position.x = this.targetPosition.x;
+            if(Math.abs(this.targetPosition.y - this.position.y) &lt; 0.001)
+                this.position.y = this.targetPosition.y;
+
+            if(this.isAtTargetPos() &amp;&amp; this.onTranslationFinished) {
+                this.onTranslationFinished();
+                this.onTranslationFinished = null;
+            }
+        }
+
+        if(this.scaling != this.targetScaling) {
+            // Handle scaling toward a specified point
+            if(this.scalingPoint) {
+                var preScaling = this.scaling;
+                this.scaling += (this.targetScaling - this.scaling) * this.scalingSpeed;
+                var relativeScaling = this.scaling / preScaling;
+
+                this.setPosition(this.position.x * relativeScaling + this.scalingPoint.x * (relativeScaling - 1),
+                                 this.position.y * relativeScaling + this.scalingPoint.y * (relativeScaling - 1));
+
+                if(Math.abs(this.targetScaling - this.scaling) &lt; 0.001)
+                    this.scaling = this.targetScaling;
+
+                if(this.onScalingFinished &amp;&amp; Math.abs(this.targetScaling - this.scaling) &lt; 0.02) {
+                    this.onScalingFinished();
+                    this.onScalingFinished = null;
+                }
+            }
+            else {
+                this.scaling += (this.targetScaling - this.scaling) * this.scalingSpeed;
+            }
+        }
+
+        if(this.bounds.minX != null) {
+            if(this.position.x &lt; this.bounds.minX)
+                this.position.x = this.bounds.minX;
+        }
+        if(this.bounds.maxX != null) {
+            if(this.position.x > this.bounds.maxX)
+                this.position.x = this.bounds.maxX;
+        }
+        if(this.bounds.minY != null) {
+            if(this.position.y &lt; this.bounds.minY)
+                this.position.y = this.bounds.minY;
+        }
+        if(this.bounds.maxY != null) {
+            if(this.position.y > this.bounds.maxY)
+                this.position.y = this.bounds.maxY;
+        }
+    };
+
+    isAtTargetPos() {
+        return this.targetPosition.x == this.position.x &amp;&amp; this.targetPosition.y == this.position.y;
+    };
+
+    attachToEntity(entity) {
+        this.attachedEntity = entity;
+    };
+
+    detachEntity() {
+        this.attachedEntity = null;
+    };
+
+    setTargetPosition(x, y, onFinished) {
+        this.targetPosition.x = x;
+        this.targetPosition.y = y;
+        this.onTranslationFinished = onFinished;
+    };
+
+    setPosition(x, y) {
+        this.targetPosition.x = x;
+        this.position.x = x;
+        this.targetPosition.y = y;
+        this.position.y = y;
+    };
+
+    setScaling(scaling, scalingPoint) {
+        if(this.scaling == scaling)
+            return;
+
+        scaling = Math.max(this._MIN_SCALING, scaling);
+
+        if(scalingPoint) {
+            var relativeScaling = scaling / this.scaling;
+            this.setPosition(this.position.x * relativeScaling + scalingPoint.x * (relativeScaling - 1),
+                             this.position.y * relativeScaling + scalingPoint.y * (relativeScaling - 1));
+        }
+
+        this.scaling = scaling;
+        this.targetScaling = scaling;
+    };
+
+    setTargetScaling(scaling, scalingPoint, onFinished, scalingSpeed) {
+        this.targetScaling = Math.max(this._MIN_SCALING, scaling);
+
+        this.scalingPoint = scalingPoint;
+        this.onScalingFinished = onFinished;
+
+        if(scalingSpeed)
+            this.scalingSpeed = scalingSpeed;
+    };
+
+
+    applyTransforms(ctx) {
+        ctx.translate(-this.position.x, -this.position.y);
+        ctx.scale(this.scaling, this.scaling);
+    };
+
+    setBounds(minX, minY, maxX, maxY) {
+        this.bounds.minX = minX;
+        this.bounds.minY = minY;
+        this.bounds.maxX = maxX;
+        this.bounds.maxY = maxY;
+    };
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="engine.Animation.html">Animation</a></li><li><a href="engine.AudioManager.html">AudioManager</a></li><li><a href="engine.Camera.html">Camera</a></li><li><a href="engine.Core.html">Core</a></li><li><a href="engine.Debug.html">Debug</a></li><li><a href="engine.EventListener.html">EventListener</a></li><li><a href="engine.ParticleSpawner.html">ParticleSpawner</a></li><li><a href="engine.ResourceManager.html">ResourceManager</a></li><li><a href="engine.State.html">State</a></li><li><a href="MapLayer.html">MapLayer</a></li><li><a href="TileMap.html">TileMap</a></li><li><a href="Tileset.html">Tileset</a></li></ul><h3><a href="global.html">Global</a></h3>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Feb 13 2019 16:48:35 GMT+0100 (GMT+01:00)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

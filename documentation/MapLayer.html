@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Engine</title>
+    <title>JSDoc: Class: MapLayer</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Engine</h1>
+    <h1 class="page-title">Class: MapLayer</h1>
 
     
 
@@ -28,9 +28,9 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>Engine<span class="signature">()</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>MapLayer<span class="signature">(name, tileset)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">Manages modules.</div>
+            <div class="class-description">Stores a layer of tiles for a map.</div>
         
     
 </header>
@@ -45,7 +45,7 @@
     
 
     
-    <h4 class="name" id="Engine"><span class="type-signature"></span>new Engine<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="MapLayer"><span class="type-signature"></span>new MapLayer<span class="signature">(name, tileset)</span><span class="type-signature"></span></h4>
     
 
     
@@ -58,6 +58,78 @@
 
 
 
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>name</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The name of the layer.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>tileset</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="Tileset.html">Tileset</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">The tileset of the layer.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
 
 
 
@@ -93,7 +165,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line5">line 5</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line271">line 271</a>
     </li></ul></dd>
     
 
@@ -141,13 +213,13 @@
 
         
             
-<h4 class="name" id="loadedModules"><span class="type-signature"></span>loadedModules<span class="type-signature"></span></h4>
+<h4 class="name" id="name"><span class="type-signature"></span>name<span class="type-signature"></span></h4>
 
 
 
 
 <div class="description">
-    Stores loaded modules.
+    Name of the layer.
 </div>
 
 
@@ -185,7 +257,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line16">line 16</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line282">line 282</a>
     </li></ul></dd>
     
 
@@ -203,13 +275,13 @@
 
         
             
-<h4 class="name" id="root"><span class="type-signature"></span>root<span class="type-signature"></span></h4>
+<h4 class="name" id="tiles"><span class="type-signature"></span>tiles<span class="type-signature"></span></h4>
 
 
 
 
 <div class="description">
-    The root of the module files.
+    Tiles array. [rows][cols].
 </div>
 
 
@@ -247,7 +319,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line13">line 13</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line274">line 274</a>
     </li></ul></dd>
     
 
@@ -265,13 +337,13 @@
 
         
             
-<h4 class="name" id="version"><span class="type-signature"></span>version<span class="type-signature"></span></h4>
+<h4 class="name" id="tileset"><span class="type-signature"></span>tileset<span class="type-signature"></span></h4>
 
 
 
 
 <div class="description">
-    The current version of the engine.
+    Tileset used by the layer for rendering.
 </div>
 
 
@@ -309,7 +381,69 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line10">line 10</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line285">line 285</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="visible"><span class="type-signature"></span>visible<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Whether or not this layer should be rendered.
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line288">line 288</a>
     </li></ul></dd>
     
 
@@ -337,7 +471,7 @@
     
 
     
-    <h4 class="name" id="isModuleLoaded"><span class="type-signature"></span>isModuleLoaded<span class="signature">(moduleName)</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
+    <h4 class="name" id="render"><span class="type-signature"></span>render<span class="signature">(ctx)</span><span class="type-signature"></span></h4>
     
 
     
@@ -345,7 +479,7 @@
 
 
 <div class="description">
-    Checks if a given module is loaded.
+    Renders this layer.
 </div>
 
 
@@ -381,13 +515,13 @@
 
         <tr>
             
-                <td class="name"><code>moduleName</code></td>
+                <td class="name"><code>ctx</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">String</span>
+<span class="param-type">CanvasRenderingContext2D</span>
 
 
             
@@ -397,7 +531,7 @@
 
             
 
-            <td class="description last">The name of the module to check for.</td>
+            <td class="description last">The context on which to render the layer.</td>
         </tr>
 
     
@@ -438,176 +572,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line47">line 47</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    Whether or not the module is loaded.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Boolean</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="loadAllModules"><span class="type-signature"></span>loadAllModules<span class="signature">(callback<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Loads all modules available in this engine.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">A function that will be called when the modules are done loading.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line39">line 39</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line294">line 294</a>
     </li></ul></dd>
     
 
@@ -641,7 +606,7 @@
     
 
     
-    <h4 class="name" id="loadModules"><span class="type-signature"></span>loadModules<span class="signature">(modules, callback<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="setSize"><span class="type-signature"></span>setSize<span class="signature">(cols, rows)</span><span class="type-signature"></span></h4>
     
 
     
@@ -649,7 +614,7 @@
 
 
 <div class="description">
-    Loads the given modules.
+    Sets the size of the layer and refreshes the tiles array
 </div>
 
 
@@ -673,8 +638,6 @@
         <th>Type</th>
 
         
-        <th>Attributes</th>
-        
 
         
 
@@ -687,64 +650,46 @@
 
         <tr>
             
-                <td class="name"><code>modules</code></td>
+                <td class="name"><code>cols</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Array</span>
+<span class="param-type">int</span>
 
 
             
             </td>
 
             
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
 
             
 
-            <td class="description last">The name of the modules to load.</td>
+            <td class="description last">The new number of columns.</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>callback</code></td>
+                <td class="name"><code>rows</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">function</span>
+<span class="param-type">int</span>
 
 
             
             </td>
 
             
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
 
             
 
-            <td class="description last">A function that will be called when the modules are done loading.</td>
+            <td class="description last">The new number of rows.</td>
         </tr>
 
     
@@ -785,7 +730,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="engine.js.html">engine.js</a>, <a href="engine.js.html#line23">line 23</a>
+        <a href="tilemap-old.js.html">tilemap-old.js</a>, <a href="tilemap-old.js.html#line320">line 320</a>
     </li></ul></dd>
     
 

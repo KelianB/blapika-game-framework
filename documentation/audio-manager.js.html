@@ -27,7 +27,7 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>/*
-    global $ Engine
+    global Engine
 */
 
 // /!\ Do not use audio.play() or audio.volume. Instead use respectively AudioManager.play and AudioManager.setVolume
@@ -35,46 +35,75 @@
 /** @class
  * @classdesc An utility class which improves audio for JS apps. Extends audio capabilities and handles features such as global volume, mute, ...
  */
-Engine.prototype.AudioManager = new function() {
-    var self = this;
-    this.volumeModifier = 1;
-    this.playing = [];
-    this.muted = false;
+engine.AudioManager = class AudioManager {
+    constructor() {
+        /** A global volume modifier by which the volume of all sounds will be multiplied. */
+        this.volumeModifier = 1;
 
-    // -------- Audio prototype changes --------
+        /** An array of sounds that are playing. */
+        this.playing = [];
 
-    /** Fades the volume of the audio element to a given value in a given duration.
-     * @param {Number} targetVolume - The volume at which the audio will end.
-     * @param {Number} duration - The time it should take to reach the target volume, in milliseconds.
-     */
-    Audio.prototype.fadeTo = function(targetVolume, duration) {
-        $(this).animate({volume: targetVolume}, duration);
-    };
+        /** Whether or not the audio is muted. */
+        this.muted = false;
 
-    /** Sets the volume of an Audio element.
-     * @param {Number} volume - The new volume, between 0 and 1.
-     */
-    Audio.prototype.setVolume = function(volume) {
-        this.absoluteVolume = volume;
-        self.applyVolumeTransforms(this);
-    };
+        // -------- Audio prototype changes --------
 
-    // -------- Audio Manager functions --------
+        let self = this;
+
+        /** Fades the volume of the audio element to a given value in a given duration.
+        * @param {Number} targetVolume - The volume at which the audio will end.
+        * @param {Number} duration - The time it should take to reach the target volume, in milliseconds.
+        * @param {function} onComplete - A function that will be called when the fading animation is finished.
+        */
+        Audio.prototype.fadeTo = function(targetVolume, duration, onComplete) {
+           // Old jQuery code : $(this).animate({absoluteVolume: targetVolume, volume: targetVolume * self.volumeModifier}, duration, null, onComplete);
+
+           const originalVolume = this.volume;
+           const delta = targetVolume - originalVolume;
+
+           if(delta == 0 || !duration) {
+              this.volume = targetVolume;
+              if(onComplete !== undefined)
+                  onComplete();
+              return null;
+           }
+           const interval = 15;
+           const ticks = Math.floor(duration / interval);
+           let tick = 1;
+           const timer = setInterval(() => {
+              this.volume = originalVolume + (tick / ticks) * delta;
+              if(++tick === ticks) {
+                 clearInterval(timer);
+                 if(onComplete !== undefined)
+                     onComplete();
+              }
+           }, interval);
+           return timer;
+        }
+
+        /** Sets the volume of an Audio element.
+        * @param {Number} volume - The new volume, between 0 and 1.
+        */
+        Audio.prototype.setVolume = function(volume) {
+            this.absoluteVolume = volume;
+            self.applyVolumeTransforms(this);
+        };
+    }
 
     /** Sets the playing volume of a given Audio element, handling the global volume modifier.
      * @param {Audio} audio - The target Audio element.
      */
-    this.applyVolumeTransforms = function(audio) {
-        audio.absoluteVolume = audio.absoluteVolume || 1;
+    applyVolumeTransforms(audio) {
+        audio.absoluteVolume = typeof audio.absoluteVolume === "undefined" ? 1 : audio.absoluteVolume;
         audio.volume = audio.absoluteVolume * this.volumeModifier;
     };
 
     /** Sets the volume modifier which will multiply the volume of all sounds.
      * @param {Number} volumeModifier - The volume multiplier, between 0 and 1.
      */
-    this.setVolumeModifier = function(volumeModifier) {
+    setVolumeModifier(volumeModifier) {
         this.volumeModifier = volumeModifier;
-        for(var i = 0; i &lt; this.playing.length; i++)
+        for(let i = 0; i &lt; this.playing.length; i++)
             this.applyVolumeTransforms(this.playing[i]);
     };
 
@@ -82,81 +111,140 @@ Engine.prototype.AudioManager = new function() {
      * @param {Audio} audio - The audio element to play.
      * @param {Object} [fadeIn] - An object describing how to fade the audio (properties: start, end, duration).
      */
-    this.playRepeatable = function(audio, fadeIn) {
-        this.play(audio.cloneNode(), false, fadeIn);
+    playRepeatable(audio, fadeIn) {
+        let clonedAudio = audio.cloneNode();
+        this.play(clonedAudio, false, fadeIn);
+        return clonedAudio;
     };
+
+    /** Stops a given sound.
+     * @param {Audio} audio - The audio element to stop.
+     * @param {Number} [fadeOutDuration] - The duration during which the sound will fade out (in milliseconds).
+     */
+    stop(audio, fadeOutDuration) {
+        if(audio.fadeOutInterval)
+            clearInterval(audio.fadeOutInterval);
+
+         // Handle fading out
+         if(!audio.initialVolume)
+             audio.initialVolume = audio.absoluteVolume;
+         audio.fadeOutInterval = audio.fadeTo(0, fadeOutDuration, () => {
+            audio.fadeOutInterval = null;
+            audio.pause();
+            audio.currentTime = 0;
+
+            if(this.playing.indexOf(audio) != -1)
+               this.playing.splice(this.playing.indexOf(audio), 1);
+         });
+
+    };
+
 
     /** Plays audio.
      * @param {Audio} audio - The audio element to play.
      * @param {Boolean} [reset=false] - Whether or not to reset the currentTime of the Audio before playing it.
      * @param {Object} [fadeIn] - An object describing how to fade the audio (properties: start, end, duration).
      */
-    this.play = function(audio, reset, fadeIn) {
+    play(audio, reset, fadeIn) {
+        if(!audio instanceof Audio) {
+            console.error("[AudioManager] Couldn't play audio! audio is not an instance of Audio.")
+            return;
+        }
+        if(audio.fadeOutInterval != null)
+            clearInterval(audio.fadeOutInterval);
+
+        // The following lines are here because the playRepeatable function clones the node, which doesn't keep the prototype functions.
+        if(!audio.fadeTo)
+            audio.fadeTo = Audio.prototype.fadeTo;
+        if(!audio.setVolume)
+            audio.setVolume = Audio.prototype.setVolume;
+
         if(reset)
             audio.currentTime = 0;
 
-        if(fadeIn) {
-            audio.volume = fadeIn.start;
-            audio.fadeTo(fadeIn.end, fadeIn.duration);
+        let playArgs = arguments;
+
+        if(!audio.hasEndingListener) {
+            audio.addEventListener("ended", () => {
+                // Handle looping
+                let shouldLoop = audio.loopingCount &amp;&amp; (audio.loopingCount == -1 || audio.loopingCount-- > 0);
+                if(shouldLoop) {
+                    if(audio.loopingCount == 0)
+                        delete audio.loopingCount; // stop looping
+                    else
+                        this.play.apply(this, playArgs); // play the sound again
+                }
+                else {
+                    // Remove from playing array
+                    this.playing.splice(this.playing.indexOf(audio), 1);
+                }
+            });
         }
-
-        audio.addEventListener("ended", function() {
-            // Remove from playing array
-            self.playing.splice(self.playing.indexOf(this), 1);
-        });
-
-        this.playing.push(audio);
+        audio.hasEndingListener = true;
 
         audio.muted = this.muted;
+
+        // Reset the volume to what it was before it started to fade out
+        if(audio.initialVolume) {
+            audio.setVolume(audio.initialVolume);
+            delete audio.initialVolume;
+        }
+
         this.applyVolumeTransforms(audio);
+
+        // Handle fading in
+        if(fadeIn) {
+            audio.setVolume(fadeIn.start || 0);
+            audio.fadeTo(fadeIn.end || 1, fadeIn.duration);
+        }
+
+        if(this.playing.indexOf(audio) == -1)
+            this.playing.push(audio);
+
         audio.play();
+        return audio;
     };
 
     /** Plays audio repeatedly.
      * @param {Audio} audio - The audio element to play.
      * @param {Integer} [count=infinite] - How many times the audio should be played.
      */
-    this.loop = function(audio, count) {
-        if(count == undefined)
-            count = -1;
+    loop(audio, count, fadeIn) {
+        count = count || -1;
 
-        if(count != 0) {
-            self.play(audio, true);
+        audio.loopingCount = count;
+        this.play(audio, true, fadeIn);
 
-            audio.addEventListener("ended", function() {
-                console.log(this, --count);
-                self.loop(this, --count);
-            });
-        }
+        return audio;
     };
 
     /** Toggles mute for all audio elements. */
-    this.toggleMute = function() {
+    toggleMute() {
         this.muted = !this.muted;
 
-        for(var i = 0; i &lt; this.playing.length; i++)
+        for(let i = 0; i &lt; this.playing.length; i++)
             this.playing[i].muted = this.muted;
     };
 
     /** Stops all audio currently playing.
      * @param {Number} [fadeOutDuration] - The duration of the fade-out effect.
      */
-    this.stopAll = function(fadeOutDuration) {
-        for(var i = 0; i &lt; this.playing.length; i++) {
-            var audio = this.playing[i];
-            if(fadeOutDuration == undefined) {
-                audio.pause();
-                audio.currentTime = 0;
-            }
+    stopAll(fadeOutDuration) {
+        for(let i = 0; i &lt; this.playing.length; i++) {
+            let audio = this.playing[i];
+            if(typeof fadeOutDuration == "undefined")
+                this.stop(audio);
             else {
                 audio.fadeTo(0, fadeOutDuration);
-                setTimeout(function(){
-                    audio.pause();
+                setTimeout(() => {
+                    this.stop(audio);
                 }, fadeOutDuration);
             }
         }
     };
 };
+
+engine.audioManager = new engine.AudioManager();
 </code></pre>
         </article>
     </section>
@@ -167,13 +255,13 @@ Engine.prototype.AudioManager = new function() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="Engine_Animation.html">Animation</a></li><li><a href="Engine_AudioManager.html">AudioManager</a></li><li><a href="Engine_Core.html">Core</a></li><li><a href="Engine_Debug.html">Debug</a></li><li><a href="Engine_EventListener.html">EventListener</a></li><li><a href="Engine_ParticleSpawner.html">ParticleSpawner</a></li><li><a href="Engine_ResourceManager.html">ResourceManager</a></li><li><a href="Engine_State.html">State</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Engine.html">Engine</a></li><li><a href="engine.Animation.html">Animation</a></li><li><a href="engine.AudioManager.html">AudioManager</a></li><li><a href="engine.Camera.html">Camera</a></li><li><a href="engine.Core.html">Core</a></li><li><a href="engine.Debug.html">Debug</a></li><li><a href="engine.EventListener.html">EventListener</a></li><li><a href="engine.ParticleSpawner.html">ParticleSpawner</a></li><li><a href="engine.ResourceManager.html">ResourceManager</a></li><li><a href="engine.State.html">State</a></li><li><a href="MapLayer.html">MapLayer</a></li><li><a href="TileMap.html">TileMap</a></li><li><a href="Tileset.html">Tileset</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Wed Aug 24 2016 23:37:59 GMT+0200 (Paris, Madrid (heure d’été))
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Feb 13 2019 16:48:35 GMT+0100 (GMT+01:00)
 </footer>
 
 <script> prettyPrint(); </script>
