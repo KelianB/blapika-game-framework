@@ -1,5 +1,5 @@
 /*
-    global $ Engine engine
+    global Engine engine
 */
 
 /** Creates an instance of the engine core.

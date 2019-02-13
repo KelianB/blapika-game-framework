@@ -1,5 +1,5 @@
 /*
-    global $ Engine
+    global Engine
 */
 
 // /!\ Do not use audio.play() or audio.volume. Instead use respectively AudioManager.play and AudioManager.setVolume
@@ -25,10 +25,33 @@ engine.AudioManager = class AudioManager {
         /** Fades the volume of the audio element to a given value in a given duration.
         * @param {Number} targetVolume - The volume at which the audio will end.
         * @param {Number} duration - The time it should take to reach the target volume, in milliseconds.
+        * @param {function} onComplete - A function that will be called when the fading animation is finished.
         */
         Audio.prototype.fadeTo = function(targetVolume, duration, onComplete) {
-            return $(this).animate({absoluteVolume: targetVolume, volume: targetVolume * self.volumeModifier}, duration, null, onComplete);
-        };
+           // Old jQuery code : $(this).animate({absoluteVolume: targetVolume, volume: targetVolume * self.volumeModifier}, duration, null, onComplete);
+
+           const originalVolume = this.volume;
+           const delta = targetVolume - originalVolume;
+
+           if(delta == 0 || !duration) {
+              this.volume = targetVolume;
+              if(onComplete !== undefined)
+                  onComplete();
+              return null;
+           }
+           const interval = 15;
+           const ticks = Math.floor(duration / interval);
+           let tick = 1;
+           const timer = setInterval(() => {
+              this.volume = originalVolume + (tick / ticks) * delta;
+              if(++tick === ticks) {
+                 clearInterval(timer);
+                 if(onComplete !== undefined)
+                     onComplete();
+              }
+           }, interval);
+           return timer;
+        }
 
         /** Sets the volume of an Audio element.
         * @param {Number} volume - The new volume, between 0 and 1.
@@ -71,28 +94,21 @@ engine.AudioManager = class AudioManager {
      * @param {Number} [fadeOutDuration] - The duration during which the sound will fade out (in milliseconds).
      */
     stop(audio, fadeOutDuration) {
-        function endAndRemove() {
+        if(audio.fadeOutInterval)
+            clearInterval(audio.fadeOutInterval);
+
+         // Handle fading out
+         if(!audio.initialVolume)
+             audio.initialVolume = audio.absoluteVolume;
+         audio.fadeOutInterval = audio.fadeTo(0, fadeOutDuration, () => {
+            audio.fadeOutInterval = null;
             audio.pause();
             audio.currentTime = 0;
 
-            if(self.playing.indexOf(audio) != -1)
-                self.playing.splice(self.playing.indexOf(audio), 1);
-        }
+            if(this.playing.indexOf(audio) != -1)
+               this.playing.splice(this.playing.indexOf(audio), 1);
+         });
 
-        if(audio.fadeOutAnimation)
-            audio.fadeOutAnimation.stop();
-
-        if(typeof fadeOutDuration === "undefined")
-            endAndRemove();
-        else {
-            // Handle fading out
-            if(!audio.initialVolume)
-                audio.initialVolume = audio.absoluteVolume;
-            audio.fadeOutAnimation = audio.fadeTo(0, fadeOutDuration, function() {
-                audio.fadeOutAnimation = null;
-                endAndRemove();
-            });
-        }
     };
 
 
@@ -106,8 +122,8 @@ engine.AudioManager = class AudioManager {
             console.error("[AudioManager] Couldn't play audio! audio is not an instance of Audio.")
             return;
         }
-        if(audio.fadeOutAnimation)
-            audio.fadeOutAnimation.stop();
+        if(audio.fadeOutInterval != null)
+            clearInterval(audio.fadeOutInterval);
 
         // The following lines are here because the playRepeatable function clones the node, which doesn't keep the prototype functions.
         if(!audio.fadeTo)
