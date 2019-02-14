@@ -1,11 +1,9 @@
-/*
-    global Engine
-*/
+/* global Engine */
 
 /** @class
  * @classdesc An utility class which handles the display of debugging info.
  */
-engine.Debug = class Debug {
+Engine.Debug = class Debug {
     constructor() {
         /** The code of the key that toggles the debug. */
         this.toggleKey = 101;
@@ -108,4 +106,4 @@ engine.Debug = class Debug {
     };
 };
 
-engine.debug = new engine.Debug();
+Engine.debug = new Engine.Debug();

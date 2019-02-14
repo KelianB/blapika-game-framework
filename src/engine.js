@@ -3,38 +3,61 @@
  * @classdesc Manages modules.
  */
 class Engine {
-   constructor() {
-      Engine.MODULE_NAMES = ["core", "animation", "audio-manager", "resource-manager", "debug", "particle", "camera", "tilemap"];
+   static init(cfg) {
+      Engine.MODULES = {
+         "core": {
+            internalFiles: ["state.js", "event-listener.js"]
+         },
+         "animation": {},
+         "audio-manager": {},
+         "resource-manager": {},
+         "debug": {},
+         "particle": {
+            internalFiles: ["particle-spawner.js"]
+         },
+         "camera": {},
+         "tilemap": {}
+      };
+      Engine.MODULE_NAMES = Object.keys(Engine.MODULES);
 
       /** The current version of the engine. */
-      this.version = "0.2.0";
-
-      /** The root of the module files. */
-      this.root = "/";
+      Engine.version = "0.3.0";
 
       /** Stores loaded modules. */
-      this.loadedModules = [];
+      Engine.loadedModules = [];
+
+      /** The root of the module files. */
+      Engine.root = cfg.hasOwnProperty("root") ? cfg.root : "/";
+
+      // Load required modules and scripts
+      let onReady = cfg.hasOwnProperty("onReady") ? cfg.onReady : () => {};
+      let modulesToLoad = cfg.hasOwnProperty("loadModules") ? cfg.loadModules : [];
+      let scriptsToLoad = cfg.hasOwnProperty("loadScripts") ? cfg.loadScripts : [];
+      Engine.loadModules(modulesToLoad, () => {
+         Engine.ScriptLoader.loadOrdered(scriptsToLoad, onReady);
+      });
    }
 
    /** Loads the given modules.
    * @param {Array} modules - The name of the modules to load.
    * @param {Function} [callback] - A function that will be called when the modules are done loading.
    */
-   loadModules(modules, callback) {
+   static loadModules(modules, callback) {
       let toLoad = modules.length;
 
-      for(let i = 0; i < modules.length; i++) {
-         let m = modules[i];
-         if(Engine.MODULE_NAMES.indexOf(m) == -1) {
-            console.error("Module", m, "does not exist.")
-            toLoad--;
-         }
-         else {
-            Engine._loadScript(this.root + m + ".js", () => {
-               this.loadedModules.push(m);
-               if(--toLoad == 0 && callback)
-                    callback();
-            });
+      if(toLoad == 0)
+         callback();
+      else {
+         for(let i = 0; i < modules.length; i++) {
+            let m = modules[i];
+            if(Engine.MODULE_NAMES.indexOf(m) == -1 || Engine.isModuleLoaded(m))
+               toLoad--;
+            else {
+               Engine.loadModule(m, () => {
+                  if(--toLoad == 0 && callback)
+                       callback();
+               });
+            }
          }
       }
    }
@@ -42,25 +65,53 @@ class Engine {
    /** Loads all modules available in this engine.
    * @param {Function} [callback] - A function that will be called when the modules are done loading.
    */
-   loadAllModules(callback) {
-      this.loadModules(Engine.MODULE_NAMES, callback);
+   static loadAllModules(callback) {
+      Engine.loadModules(Engine.MODULE_NAMES, callback);
    }
 
    /** Checks if a given module is loaded.
    * @param {String} moduleName - The name of the module to check for.
    * @returns {Boolean} Whether or not the module is loaded.
    */
-   isModuleLoaded(moduleName) {
-      return this.loadedModules.indexOf(moduleName) != -1;
+   static isModuleLoaded(moduleName) {
+      return Engine.loadedModules.indexOf(moduleName) != -1;
    }
 
-   static _loadScript(src, onLoad) {
-      let scriptTag = document.createElement("script");
-      let head = document.getElementsByTagName("head")[0];
-      head.appendChild(scriptTag); // Append the script to the DOM
+   /** Loads a single module
+   * @param {String} moduleName - The name of the module to load.
+   * @returns {function} onLoad - A function that will be called when the module done loading.
+   */
+   static loadModule(name, onLoad) {
+      if(Engine.MODULE_NAMES.indexOf(name) == -1) {
+         console.error("Module", name, "does not exist.")
+         return;
+      }
+      else if(Engine.isModuleLoaded(name)) {
+         console.error("Module", name, "is already loaded.")
+         return;
+      }
 
-      scriptTag.onload = onLoad;
-      scriptTag.src = src;
+      let moduleRoot = Engine.root + "modules/" + name + "/";
+      let internalFiles = Engine.MODULES[name].internalFiles;
+
+      function loadModuleFile() {
+         Engine.ScriptLoader.loadScript(moduleRoot + name + ".js", () => {
+            Engine.loadedModules.push(name);
+            if(onLoad)
+               onLoad();
+         });
+      }
+
+      if(!internalFiles || internalFiles.length == 0)
+         loadModuleFile();
+      else {
+         let srcs = [];
+         for(let i = 0; i < internalFiles.length; i++)
+            srcs.push(moduleRoot + internalFiles[i]);
+
+         // Load dependencies and then the main file
+         Engine.ScriptLoader.loadOrdered(srcs, () => {loadModuleFile();});
+      }
    }
 
    static httpGet(url, callbacks) {
@@ -84,82 +135,30 @@ class Engine {
    }
 };
 
-let engine = new Engine();
+Engine.ScriptLoader = class ScriptLoader {
+   static loadScript(src, onLoad) {
+      let scriptTag = document.createElement("script");
+      let head = document.getElementsByTagName("head")[0];
+      head.appendChild(scriptTag); // Append the script to the DOM
 
-/** Creates the structure of a state to be used in the game engine.
- * @class
- * @classdesc Represents one possible state for the app. See Game.setState.
-*/
-engine.State = class State {
-   constructor() {
-      // Tick elapsed since the state was entered
-      this.tick = 0;
-
-      // Create an event listener for this state.
-      this.setEventListener(new engine.EventListener());
+      scriptTag.onload = onLoad;
+      scriptTag.src = src;
    }
 
-   /** Renders the state. Note tat the engine handles the scaling for you before calling this function.
-   * @param {CanvasRenderingContext2D} ctx - The context on which to render the state.
-   */
-   render(ctx) {}
-
-   /** Updates the variables required for this state to work.
-   *  @param {int} dt - The number of microseconds by which the game should go forward in time.
-   */
-   update(dt) {}
-
-   /** Fired by the engine when this state is left. */
-   onLeave() {}
-
-   /** Fired by the engine when this state is entered.
-   * @param {State} previousState - The previous state of the app (null if there is none).
-   */
-   onEnter(previousState) {}
-
-   /** Sets the event listener of this state.
-   * @param {EventListener} eventListener - The event listener.
-   */
-   setEventListener(eventListener) {
-      if(engine.core.state == this) {
-         console.error("Cannot change event listener of current state.");
+   static loadOrdered(srcs, onFinished) {
+      if(!srcs || srcs.length == 0) {
+         onFinished();
          return;
       }
-      this.eventListener = eventListener;
+
+      function loadNextScript(idx) {
+         Engine.ScriptLoader.loadScript(srcs[idx], function() {
+            if(idx == srcs.length-1)
+               onFinished();
+            else
+               loadNextScript(idx+1);
+         });
+      }
+      loadNextScript(0);
    }
 }
-
-/** Creates an event listener.
- * @class
- * @classdesc Utility class that catches event fired by the used.class
- * @param {Object} receivers - Functions that will be called when receiving an event.
- */
-engine.EventListener = class EventListener {
-   constructor(receivers) {
-      // Override listeners
-      if(receivers) {
-         for(let key in receivers) {
-             if(this[key])
-                 this[key] = receivers[key];
-         }
-      }
-   }
-
-   /** @param {int} button - The mouse button that was pressed. */
-   onMouseDown(button) {}
-
-   /** @param {int} button - The mouse button that was released. */
-   onMouseUp(button) {}
-
-   /** @param {Object} mouseData - The mouse data. See Engine.Core.mouse */
-   onMouseMove(position) {}
-
-   /** @param {Number} wheelDelta - The scroll amount. */
-   onWheel(wheelDelta) {}
-
-   /** @param {int} keyCode - The code of the key that was pressed. See https://goo.gl/qTckww */
-   onKeyDown(keyCode) {}
-
-   /** @param {int} keyCode - The code of the key that was released. See https://goo.gl/qTckww */
-   onKeyUp(keyCode) {}
-};

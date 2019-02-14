@@ -1,13 +1,11 @@
-/*
-    global Engine
-*/
+/* global Engine */
 
 // /!\ Do not use audio.play() or audio.volume. Instead use respectively AudioManager.play and AudioManager.setVolume
 
 /** @class
  * @classdesc An utility class which improves audio for JS apps. Extends audio capabilities and handles features such as global volume, mute, ...
  */
-engine.AudioManager = class AudioManager {
+Engine.AudioManager = class AudioManager {
     constructor() {
         /** A global volume modifier by which the volume of all sounds will be multiplied. */
         this.volumeModifier = 1;
@@ -216,4 +214,4 @@ engine.AudioManager = class AudioManager {
     };
 };
 
-engine.audioManager = new engine.AudioManager();
+Engine.audioManager = new Engine.AudioManager();

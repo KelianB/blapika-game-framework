@@ -1,6 +1,4 @@
-/*
-    global Engine
-*/
+/* global Engine */
 
 /** Creates an animation.
  * @class
@@ -8,7 +6,7 @@
  * @param {Image} image - The sprite that will contain every frame of the animation.
  * @param {(int|Array)} delays - An array or a constant defining the number of frames between two images.
  */
-engine.Animation = class Animation {
+Engine.Animation = class Animation {
     constructor(image, numSprites, delays) {
         this.image = image;
         this.delays = delays;

@@ -1,6 +1,4 @@
-/*
-    global Engine
-*/
+/* global Engine */
 
 /*
     Dependencies:
@@ -10,7 +8,7 @@
 /** @class
  * @classdesc An utility class which simplifies the use of resources for JS apps. Handles loading, storage, errors, ...
  */
-engine.ResourceManager = class ResourceManager {
+Engine.ResourceManager = class ResourceManager {
     constructor() {
         /** Resource types supported by this manager */
         this.types = {IMAGE: "images", SOUND: "sounds", VIDEO: "videos", DATA: "data"};
@@ -170,4 +168,4 @@ engine.ResourceManager = class ResourceManager {
     }
 };
 
-engine.resourceManager = new engine.ResourceManager();
+Engine.resourceManager = new Engine.ResourceManager();

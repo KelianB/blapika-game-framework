@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+    </head>
+    <body>
+        <style>
+            body {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                margin: 0;
+            }
+            canvas {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        </style>
+
+        <script src="../src/engine.js"></script>
+
+        <script>
+            let game, am, rm;
+            let loading = true;
+
+            Engine.init({
+               root: "../src/",
+               loadModules: ["core", "debug", "audio-manager", "resource-manager", "camera"],
+               loadScripts: ["state-main.js"],
+               onReady: () => {
+                  // Modules and scripts are now loaded.
+
+                  game = Engine.core;
+                  am = Engine.audioManager;
+                  rm = Engine.resourceManager;
+
+                  game.init({
+                      updateFrequency: 60,
+                      viewport: document.getElementsByTagName("body")[0],
+                      width: 1280,
+                      height: 720
+                  });
+
+                  let mainState = new MainState();
+                  game.setState(mainState);
+
+                  rm.addToQueue({key: "test-image", type: rm.types.IMAGE, url: "http://i.imgur.com/7RpitHT.png"});
+                  rm.addToQueue({key: "test-audio", type: rm.types.SOUND, url: "http://nailek.net/files/music-sample.mp3"});
+
+                  rm.loadQueue({
+                     onLoaded: function() {
+                          loading = false;
+
+                          let fade = {
+                              start: 0,
+                              end: 0.5,
+                              duration: 3000
+                          };
+                          //am.play(rm.getSound("test-audio"), true, fade);
+                     }
+                  });
+               }
+            });
+        </script>
+    </body>
+</html>

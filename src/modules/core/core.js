@@ -1,14 +1,11 @@
-/*
-    global Engine engine
-*/
+/* global Engine */
 
 /** Creates an instance of the engine core.
  * @class
  * @classdesc A framework made for creating HTML5 apps that work on a canvas and use a main loop.
  */
-engine.Core = class Core {
+Engine.Core = class Core {
     constructor() {
-
         // Define default configuration
         Core.DEFAULT_CONFIG = {
             updateFrequency: 60,
@@ -53,7 +50,7 @@ engine.Core = class Core {
     static bitwiseRound(value) {
         // ~~ is a double NOT bitwise operator, which acts as a substitute for Math.floor
         return ~~(value + 0.5);
-    };
+    }
 
     /** Initializes the framework.
      * @param {Object} config - Contains all of the parameters required to initiate the framework.
@@ -86,69 +83,26 @@ engine.Core = class Core {
             document.title = this.documentTitle;
 
         // Sets a default empty state.
-        this.setState(new engine.State());
+        this.setState(new Engine.State());
 
-        let resizeTimeout;
-        window.onresize = () => {
-            clearInterval(resizeTimeout);
-            resizeTimeout = setTimeout(() => {this._onResize()}, 80);
-        };
-
-        // Register the events that will be re-dericted to event listeners.
-        this.viewport.addEventListener("mousedown", (e) => {
-            this.mouse.pressed[e.which] = true;
-            for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onMouseDown(e.which);
-        });
-        this.viewport.addEventListener("mouseup", (e) => {
-            this.mouse.pressed[e.which] = false;
-            for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onMouseUp(e.which);
-        });
-        this.viewport.addEventListener("mousemove", (e) => {
-            let rect = this.canvas.getBoundingClientRect();
-            let previousPos = {x: this.mouse.x, y: this.mouse.y};
-            this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
-            this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
-            this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
-            this.mouse.y = this.mouse.canvasY / this.renderScaling.y;
-            for(let i = 0; i < this.eventListeners.length; i++)
-               this.eventListeners[i].onMouseMove(this.mouse, previousPos, e);
-        });
-        this.viewport.addEventListener("wheel", (e) => {
-            let wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
-            if(wheelDelta == "firefox sucks")
-                wheelDelta = e.deltaY * (100 / 3); // normalize delta on firefox
-            for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onWheel(wheelDelta);
-        });
-        this.viewport.addEventListener("keydown", (e) => {
-            for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onKeyDown(e.keyCode);
-            this.keysPressed[e.keyCode] = true;
-        });
-        this.viewport.addEventListener("keyup", (e) => {
-            for(let i = 0; i < this.eventListeners.length; i++)
-                this.eventListeners[i].onKeyUp(e.keyCode);
-            this.keysPressed[e.keyCode] = false;
-        });
-
+        this._registerEventListeners();
         this._onResize();
-    };
+        this._startLoop();
+    }
 
     applyScaling(ctx) {
         ctx.scale(this.renderScaling.x, this.renderScaling.y)
-    };
+    }
     removeScaling(ctx) {
         ctx.scale(1 / this.renderScaling.x, 1 / this.renderScaling.y)
-    };
+    }
 
     /** Adds an event listener.
      * @param {EventListener} eventListener - The event listener to add.
      */
     addEventListener(eventListener) {
         this.eventListeners.push(eventListener);
-    };
+    }
 
     /** Removes a given event listener.
      * @param {EventListener} eventListener - The event listener to remove.
@@ -157,12 +111,7 @@ engine.Core = class Core {
         let idx = this.eventListeners.indexOf(eventListener);
         if(idx != -1)
             this.eventListeners.splice(idx, 1);
-    };
-
-    /** Starts the main loop of the game. */
-    startLoop() {
-        this._tick(Date.now(), 0);
-    };
+    }
 
     /** Sets the state of the game.
      * @param {Object} state - The new state value.
@@ -176,7 +125,7 @@ engine.Core = class Core {
         state.onEnter(this.state);
         this.state = state;
         this.addEventListener(this.state.eventListener);
-    };
+    }
 
     _tick(lastTime, delta) {
         let currentTime = Date.now();
@@ -232,7 +181,7 @@ engine.Core = class Core {
             y: this.canvas.height / this.height
         };
         this.hasScalingChanged = true;
-    };
+    }
 
     /** Main update function. */
     _update(dt) {
@@ -241,7 +190,7 @@ engine.Core = class Core {
         this.tick++;
 
         this.hasScalingChanged = false; // reset
-    };
+    }
 
     /** Main rendering function. */
     _render() {
@@ -253,9 +202,61 @@ engine.Core = class Core {
 
         this.ctx.restore();
 
-        if(engine.isModuleLoaded("debug") && engine.debug.enabled)
-            engine.debug.render(this.ctx);
-    };
+        if(Engine.isModuleLoaded("debug") && Engine.debug.enabled)
+            Engine.debug.render(this.ctx);
+    }
+
+    _registerEventListeners() {
+      let resizeTimeout;
+      window.addEventListener("resize", () => {
+          clearInterval(resizeTimeout);
+          resizeTimeout = setTimeout(() => {this._onResize()}, 80);
+      });
+
+      // Register the events that will be re-dericted to event listeners.
+      this.viewport.addEventListener("mousedown", (e) => {
+          this.mouse.pressed[e.which] = true;
+          for(let i = 0; i < this.eventListeners.length; i++)
+              this.eventListeners[i].onMouseDown(e.which);
+      });
+      this.viewport.addEventListener("mouseup", (e) => {
+          this.mouse.pressed[e.which] = false;
+          for(let i = 0; i < this.eventListeners.length; i++)
+              this.eventListeners[i].onMouseUp(e.which);
+      });
+      this.viewport.addEventListener("mousemove", (e) => {
+          let rect = this.canvas.getBoundingClientRect();
+          let previousPos = {x: this.mouse.x, y: this.mouse.y};
+          this.mouse.canvasX = (e.clientX || e.pageX) - rect.left;
+          this.mouse.canvasY = (e.clientY || e.pageY) - rect.top;
+          this.mouse.x = this.mouse.canvasX / this.renderScaling.x;
+          this.mouse.y = this.mouse.canvasY / this.renderScaling.y;
+          for(let i = 0; i < this.eventListeners.length; i++)
+             this.eventListeners[i].onMouseMove(this.mouse, previousPos, e);
+      });
+      this.viewport.addEventListener("wheel", (e) => {
+          let wheelDelta = e.wheelDelta ? e.deltaY : "firefox sucks";
+          if(wheelDelta == "firefox sucks")
+              wheelDelta = e.deltaY * (100 / 3); // normalize delta on firefox
+          for(let i = 0; i < this.eventListeners.length; i++)
+              this.eventListeners[i].onWheel(wheelDelta);
+      });
+      this.viewport.addEventListener("keydown", (e) => {
+          for(let i = 0; i < this.eventListeners.length; i++)
+              this.eventListeners[i].onKeyDown(e.keyCode);
+          this.keysPressed[e.keyCode] = true;
+      });
+      this.viewport.addEventListener("keyup", (e) => {
+          for(let i = 0; i < this.eventListeners.length; i++)
+              this.eventListeners[i].onKeyUp(e.keyCode);
+          this.keysPressed[e.keyCode] = false;
+      });
+   }
+
+   /** Starts the main loop of the game. */
+   _startLoop() {
+      this._tick(Date.now(), 0);
+   }
 }
 
-engine.core = new engine.Core();
+Engine.core = new Engine.Core();

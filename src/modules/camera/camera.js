@@ -1,12 +1,10 @@
-/*
-    global Engine engine
-*/
+/* global Engine */
 
 /** @class
  * @classdesc Describe class here.
  *
  */
-engine.Camera = class Camera {
+Engine.Camera = class Camera {
     constructor(config) {
         config = config || {};
 
@@ -36,8 +34,8 @@ engine.Camera = class Camera {
         if(this.attachedEntity) {
             var w = this.attachedEntity.width || this.attachedEntity.w || 0;
             var h = this.attachedEntity.height || this.attachedEntity.h || 0;
-            this.targetPosition.x = (this.attachedEntity.x + w / 2) * this.scaling - (engine.core.width / 2);
-            this.targetPosition.y = (this.attachedEntity.y + h / 2) * this.scaling - (engine.core.height / 2);
+            this.targetPosition.x = (this.attachedEntity.x + w / 2) * this.scaling - (Engine.core.width / 2);
+            this.targetPosition.y = (this.attachedEntity.y + h / 2) * this.scaling - (Engine.core.height / 2);
         }
 
         if(!this.isAtTargetPos()) {
