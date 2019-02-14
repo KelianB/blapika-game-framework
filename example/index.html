@@ -19,32 +19,30 @@
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
+                margin: auto;
             }
         </style>
 
         <script src="../src/engine.js"></script>
 
         <script>
-            let game, am, rm;
+            let game = Engine;
+            let am, rm;
             let loading = true;
 
-            Engine.init({
+            game.init({
                root: "../src/",
+               viewport: document.getElementsByTagName("body")[0],
                loadModules: ["core", "debug", "audio-manager", "resource-manager", "camera"],
                loadScripts: ["state-main.js"],
+               updateFrequency: 60,
+               width: 1280,
+               height: 720,
                onReady: () => {
-                  // Modules and scripts are now loaded.
+                  // Modules and scripts are now loaded
 
-                  game = Engine.core;
                   am = Engine.audioManager;
                   rm = Engine.resourceManager;
-
-                  game.init({
-                      updateFrequency: 60,
-                      viewport: document.getElementsByTagName("body")[0],
-                      width: 1280,
-                      height: 720
-                  });
 
                   let mainState = new MainState();
                   game.setState(mainState);
