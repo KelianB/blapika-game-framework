@@ -116,7 +116,7 @@ Engine.ResourceManager = class ResourceManager {
                 break;
              }
             case this.types.DATA: {
-               Engine.httpGet(params.url, {
+               Engine.utils.httpGet(params.url, {
                   onLoaded: (data) => {
                      loaded(data);
                   },
