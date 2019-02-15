@@ -41,19 +41,6 @@ class Engine {
       for(let key in Engine.DEFAULT_CONFIG)
          config[key] = config.hasOwnProperty(key) ? config[key] : Engine.DEFAULT_CONFIG[key];
 
-      Engine.MODULES = {
-         "animation": {},
-         "audio-manager": {},
-         "resource-manager": {},
-         "debug": {},
-         "particle": {
-            internalFiles: ["particle-spawner.js"]
-         },
-         "camera": {},
-         "tilemap": {}
-      };
-      Engine.MODULE_NAMES = Object.keys(Engine.MODULES);
-
       /** The current version of the engine. */
       Engine.version = "0.3.0";
 
@@ -98,7 +85,7 @@ class Engine {
          document.title = Engine.config.documentTitle;
 
       const DEPENDENCIES = [
-         Engine.root + "module-manager.js",
+         Engine.root + "modules.js",
          Engine.root + "viewport.js",
          Engine.root + "event-router.js",
          Engine.root + "state.js",
@@ -125,7 +112,7 @@ class Engine {
       let modulesToLoad = config.loadModules;
       let scriptsToLoad = config.loadScripts;
       Engine.ScriptLoader.load(DEPENDENCIES, () => {
-         Engine.ModuleManager.loadModules(modulesToLoad, () => {
+         Engine.Modules.loadModules(modulesToLoad, () => {
             Engine.ScriptLoader.loadOrdered(scriptsToLoad, onReady);
          });
       });
@@ -180,7 +167,7 @@ class Engine {
 
       ctx.restore();
 
-      if(Engine.ModuleManager.isModuleLoaded("debug") && Engine.debug.enabled)
+      if(Engine.Modules.isLoaded("debug") && Engine.debug.enabled)
          Engine.debug.render(ctx);
    }
 
@@ -242,7 +229,7 @@ Engine.ScriptLoader = class ScriptLoader {
    *
    */
    static loadOrdered(srcs, onFinished) {
-      if(!srcs || srcs.length == 0) {
+      if(srcs.length == 0) {
          onFinished();
          return;
       }
