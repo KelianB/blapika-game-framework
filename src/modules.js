@@ -8,7 +8,9 @@ Engine.MODULES = {
       internalFiles: ["particle-spawner.js"]
    },
    "camera": {},
-   "tilemap": {}
+   "tilemap": {
+      internalFiles: ["tile.js", "tileset.js", "map-layer.js"]
+   }
 };
 
 Engine.Modules = class Modules {

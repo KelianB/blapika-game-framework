@@ -1,4 +1,4 @@
-/* global LZString TILESET_LIST getPropFromName engine */
+/* global LZString TILESET_LIST getPropFromName */
 
 /** Creates a map.
  * @class
@@ -54,8 +54,8 @@ class TileMap {
     }
 
 
-    getScalingX() {return engine.core.renderScaling.x * (this.camera ? this.camera.scaling : 1);};
-    getScalingY() {return engine.core.renderScaling.y * (this.camera ? this.camera.scaling : 1);};
+    getScalingX() {return Engine.viewport.renderScaling.x * (this.camera ? this.camera.scaling : 1);};
+    getScalingY() {return Engine.viewport.renderScaling.y * (this.camera ? this.camera.scaling : 1);};
     applyScalingX(value) {return TileMap.bitwiseRound(this.getScalingX() * value);};
     applyScalingY(value) {return TileMap.bitwiseRound(this.getScalingY() * value);};
 
@@ -89,9 +89,9 @@ class TileMap {
         ctx.mozImageSmoothingEnabled = false;
 
         ctx.save();
-            engine.core.removeScaling(ctx);
+            Engine.viewport.removeScaling(ctx);
             // This translation HAS to be done after removing the scaling - otherwise we get rendering artifacts
-            ctx.translate(TileMap.bitwiseRound(this.getTranslationX() * engine.core.renderScaling.x), TileMap.bitwiseRound(this.getTranslationY() * engine.core.renderScaling.y));
+            ctx.translate(TileMap.bitwiseRound(this.getTranslationX() * Engine.viewport.renderScaling.x), TileMap.bitwiseRound(this.getTranslationY() * Engine.viewport.renderScaling.y));
 
             let layerCallbacksEmpty = this._layerRenderCallbacks.length == 0;
 
@@ -127,8 +127,8 @@ class TileMap {
     update() {
         if(this.camera) {
             // Calculate visible rectangle
-            let pxWidth =  this.view.width || engine.core.width,
-                pxHeight = this.view.height || engine.core.height;
+            let pxWidth =  this.view.width || Engine.width,
+                pxHeight = this.view.height || Engine.height;
 
             this.visibleRectangle.startRow = Math.max(0, Math.floor(-this.getTranslationY() / this.camera.scaling / this.tileSize));
             this.visibleRectangle.startCol = Math.max(0, Math.floor(-this.getTranslationX() / this.camera.scaling / this.tileSize));
@@ -137,7 +137,7 @@ class TileMap {
         }
 
         // Make sure the tile positions get recalculated with the right scaling whenever the scaling changes
-        if((this.camera && this.camera.hasScalingChanged) || engine.core.hasScalingChanged) {
+        if((this.camera && this.camera.hasScalingChanged) || Engine.viewport.hasScalingChanged) {
             this._recalculateTilePositions = true;
         }
 
@@ -169,8 +169,8 @@ class TileMap {
 
     canvasPosToMapPos(pos) {
         return {
-            x: engine.core.renderScaling.x / (this.camera ? this.camera.scaling : 1) * (pos.x - this.getTranslationX()),
-            y: engine.core.renderScaling.y / (this.camera ? this.camera.scaling : 1) * (pos.y - this.getTranslationY())
+            x: Engine.viewport.renderScaling.x / (this.camera ? this.camera.scaling : 1) * (pos.x - this.getTranslationX()),
+            y: Engine.viewport.renderScaling.y / (this.camera ? this.camera.scaling : 1) * (pos.y - this.getTranslationY())
         }
     };
 
@@ -298,15 +298,15 @@ class TileMap {
         let mapQueueName = "map-" + this.fileName;
 
         for(let i = 0; i < this._images.length; i++) {
-            engine.resourceManager.addToQueue({
+             Engine.resourceManager.addToQueue({
                 key: this._images[i].key,
                 url: this._images[i].url,
-                type: engine.resourceManager.types.IMAGE,
+                type: Engine.resourceManager.types.IMAGE,
                 queueName: mapQueueName
             });
         }
 
-        engine.resourceManager.loadQueue({
+        Engine.resourceManager.loadQueue({
             queueName: mapQueueName,
             onLoaded: (e) => {
                 for(let i = 0; i < this.tilesets.length; i++)
@@ -322,146 +322,5 @@ class TileMap {
             },
             onProgress: progressCallbacks.onProgress
         });
-    };
-}
-
-
-/** Creates a map layer.
- * @class
- * @classdesc Stores a layer of tiles for a map.
- * @param {string} name - The name of the layer.
- * @param {Tileset} tileset - The tileset of the layer.
- */
-class MapLayer {
-    constructor(map, data) {
-        /** Tiles array. [rows][cols]. */
-        this.tiles = data.tiles || [];
-
-        for(let i = 0; i < this.tiles.length; i++) {
-            for(let j = 0; j < this.tiles[i].length; j++) {
-                this.tiles[i][j] = new Tile(this.tiles[i][j]);
-            }
-        }
-
-        /** Name of the layer. */
-        this.name = data.name || "new-layer";
-
-        /** Tileset used by the layer for rendering tiles. */
-        this.tileset = map.getTilesetByName(data.tileset) || map.tilesets[0];
-
-        /** Whether or not this layer should be rendered. */
-        this.visible = data.visible || true;
-
-        /** Entities storage */
-        this.entities = data.entities || [];
-
-        if(this.tiles.length == 0) {
-            this.setSize(map.cols, map.rows); // All layer must be the same size
-        }
-    }
-
-    /** Renders this layer.
-     * @param {CanvasRenderingContext2D} ctx - The context on which to render the layer.
-     */
-    render(ctx, map) {
-        if(!this.visible || !this.tileset || !this.tileset.imageLoaded)
-            return;
-
-        map.forEachVisibleTile((row, col) => {
-            let tile = this.tiles[row][col];
-
-            if(tile && tile.id != 0) {
-                let tsCoords = this.tileset.indexToPosition(tile.id);
-
-                ctx.drawImage(this.tileset.getImage(),
-                    tsCoords.x, tsCoords.y, this.tileset.tileSize, this.tileset.tileSize,
-                    tile.x, tile.y, tile.w, tile.h);
-            }
-        })
-    };
-
-    /** Sets the size of the layer and refreshes the tiles array. Generally, this is meant to be called by the Map object when changing its size.
-     * @param {int} cols - The new number of columns.
-     * @param {int} rows - The new number of rows.
-     */
-    setSize(cols, rows) {
-        this.tiles.length = rows;
-
-        // Make sure all tiles have a value.
-        for(let row = 0; row < rows; row++) {
-            if(!this.tiles[row])
-                this.tiles[row] = [];
-
-            this.tiles[row].length = cols;
-
-            for(let col = 0; col < cols; col++) {
-                if(!this.tiles[row][col])
-                    this.tiles[row][col] = new Tile(0);
-            }
-        }
-    };
-}
-
-
-class Tile {
-    constructor(id) {
-        this.id = id;
-        this.x = 0;
-        this.y = 0;
-    }
-}
-
-/** Creates a tileset.
- * @class
- * @classdesc Stores the data of a tileset, used for drawing a map.
- * @param {Image} image - The tileset image.
- * @param {int} tileSize - The size of one tile on the tileset.
- */
-class Tileset {
-    constructor(name, tileSize) {
-        /** The name of this tileset, also used in the key to retrieve the image from the resource manager */
-        this.name = name;
-
-        /** The size of one tile on the tileset. */
-        this.tileSize = tileSize;
-
-        /** The number of rows across the tileset.*/
-        this.rows = null;
-        /** The number of columns acrolls the tileset. */
-        this.cols = null;
-
-        this.imageLoaded = false;
-    }
-
-    onImageLoaded() {
-        this.rows = Math.floor(this.getImage().height / this.tileSize);
-        this.cols = Math.floor(this.getImage().width / this.tileSize);
-
-        this.imageLoaded = true;
-    };
-
-    getImage() {
-         return engine.resourceManager.getImage("tileset-" + this.name);
-    };
-
-    getImageURL() {
-         return this.getImage().src;
-    };
-
-    /** @typedef Position
-     * @type Object
-     * @property {int} x - The x coordinate.
-     * @property {int} y - The y coordinate.
-     */
-
-    /** Converts a tile index into its coordinates on the tileset.
-     * @param {int} index - The index of the tile.
-     * @returns {Position} The position of the tile on the tileset.
-     */
-    indexToPosition(index) {
-        return {
-            x:            (index % this.cols) * this.tileSize,
-            y : Math.floor(index / this.cols) * this.tileSize
-        };
     };
 }
