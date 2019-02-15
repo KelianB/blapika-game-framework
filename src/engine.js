@@ -94,8 +94,6 @@ class Engine {
       ];
 
       let onReady = () => {
-         config.onReady();
-
          Engine.viewport = new Engine.Viewport(config.viewport);
          Engine.viewport.setAutoScaling(Engine.config.autoScaling);
          Engine.viewport.refreshScaling();
@@ -104,6 +102,8 @@ class Engine {
 
          // Register the events that will be redirected to event listeners
          Engine.EventRouter.setupEventListeners(Engine.viewport.container)
+
+         config.onReady();
 
          Engine._startLoop();
       };
